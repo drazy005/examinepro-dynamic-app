@@ -1,0 +1,8 @@
+{
+  "name": "ExaminePro - Advanced Exam Management System",
+  "description": "A robust examination platform with multi-role access, MCQ/Theory support, autograding with Gemini AI, and dynamic result publishing.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
