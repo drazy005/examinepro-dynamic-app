@@ -1,0 +1,16 @@
+
+{
+  "short_name": "ExaminePro",
+  "name": "ExaminePro Assessment Terminal",
+  "icons": [
+    {
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5QgVFRYmIyK4fQAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLm3YAAABJUlEQVR42u2XvQrCQBCEnwshgaSwsRAsLC0shIWFpYWFsLAQFpYWFsLCQlhYCF9A8AW8A76ApLDyByK4v8ByuRzJ3R3InY8fCBy7OzezO7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7v0HfgE8R3pXAAAAAElFTkSuQmCC",
+      "sizes": "48x48",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#4f46e5",
+  "background_color": "#0f172a"
+}
