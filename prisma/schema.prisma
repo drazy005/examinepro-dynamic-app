@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  BASIC
+  ADMIN
+  SUPERADMIN
+}
+
+enum QuestionType {
+  MCQ
+  SBA
+  THEORY
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ResultRelease {
+  INSTANT
+  DELAYED
+}
+
+enum GradingStatus {
+  UNGRADED
+  PENDING_MANUAL_REVIEW
+  GRADED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          UserRole  @default(BASIC)
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  lastActive    DateTime  @updatedAt
+
+  submissions   Submission[]
+  auditLogs     AuditLog[]
+  blogPosts     BlogPost[]
+}
+
+model Exam {
+  id              String        @id @default(uuid())
+  title           String
+  description     String?
+  category        String        @default("General")
+  difficulty      Difficulty    @default(MEDIUM)
+  durationMinutes Int           @default(30)
+  passMark        Float         @default(50)
+  totalPoints     Float         @default(0)
+  published       Boolean       @default(false)
+  version         Int           @default(1)
+  resultRelease   ResultRelease @default(INSTANT)
+  
+  // JSON settings for flexibility (Timer, Grading Policy)
+  timerSettings   Json
+  gradingPolicy   Json
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  questions       Question[]
+  submissions     Submission[]
+}
+
+model Question {
+  id            String       @id @default(uuid())
+  examId        String
+  type          QuestionType
+  text          String
+  imageUrl      String?
+  options       String[]     // For MCQ/SBA
+  correctAnswer String       // STORED SECURELY ON SERVER
+  points        Float
+  category      String?
+  
+  createdAt     DateTime     @default(now())
+
+  exam          Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+model Submission {
+  id                    String        @id @default(uuid())
+  examId                String
+  userId                String
+  
+  answers               Json          // Map of questionId -> answer
+  questionResults       Json          // Map of questionId -> result detail
+  
+  score                 Float         @default(0)
+  status                GradingStatus @default(UNGRADED)
+  graded                Boolean       @default(false)
+  resultsReleased       Boolean       @default(false)
+  
+  submittedAt           DateTime      @default(now())
+  timeSpentMs           Int           @default(0)
+
+  user                  User          @relation(fields: [userId], references: [id])
+  exam                  Exam          @relation(fields: [examId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   String
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model BlogPost {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  authorId    String
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      User     @relation(fields: [authorId], references: [id])
+}

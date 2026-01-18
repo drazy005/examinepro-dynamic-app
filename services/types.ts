@@ -17,6 +17,12 @@ export enum Difficulty {
   HARD = 'HARD'
 }
 
+export enum GradingStatus {
+  GRADED = 'GRADED',
+  PENDING_MANUAL_REVIEW = 'PENDING_MANUAL_REVIEW',
+  UNGRADED = 'UNGRADED'
+}
+
 export enum ResultRelease {
   INSTANT = 'INSTANT',
   DELAYED = 'DELAYED'
@@ -171,6 +177,7 @@ export interface Submission {
   negativeDeduction: number;
   latePenaltyDeduction: number;
   graded: boolean;
+  gradingStatus: GradingStatus;
   submittedAt: number;
   resultsReleased: boolean;
   timeStarted?: number;

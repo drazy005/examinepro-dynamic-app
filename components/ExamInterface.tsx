@@ -12,10 +12,10 @@ interface ExamInterfaceProps {
   isAdminPreview?: boolean;
 }
 
-const ExamInterface: React.FC<ExamInterfaceProps> = ({ 
-  exam, 
-  studentId, 
-  onSubmit, 
+const ExamInterface: React.FC<ExamInterfaceProps> = ({
+  exam,
+  studentId,
+  onSubmit,
   onCancel,
   isAdminPreview = false
 }) => {
@@ -24,7 +24,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
   const [proctorAlerts, setProctorAlerts] = useState<number>(0);
   const [proctorState, setProctorState] = useState<ProctoringState | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  
+
   const randomizedExamData = useMemo(() => {
     function shuffle<T>(array: T[]): T[] {
       const arr = [...array];
@@ -54,7 +54,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
 
   useEffect(() => {
     if (isAdminPreview) return;
-    
+
     const handleBlur = () => {
       setProctorAlerts(prev => prev + 1);
       logEvent(null, 'FOCUS_LOST', 'User switched focus during exam.', 'CRITICAL');
@@ -62,7 +62,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
 
     window.addEventListener('blur', handleBlur);
     enforceSecureEnvironment(true);
-    
+
     initializeProctoring().then(state => {
       setProctorState(state);
       if (videoRef.current && state.activeStream) {
@@ -107,7 +107,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const isStressState = timeLeft < 300; 
+  const isStressState = timeLeft < 300;
 
   return (
     <div className={`w-full min-h-screen flex flex-col justify-center transition-all duration-700 bg-slate-50 dark:bg-slate-950`}>
@@ -123,17 +123,17 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
 
       <div className="mx-auto max-w-5xl w-full flex flex-col justify-center p-4">
         <div className="flex justify-between items-center mb-6 px-6">
-           <div className="flex items-center gap-4">
-              <div className={`w-3 h-3 rounded-full ${isStressState ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                {isStressState ? 'HURRY - TIME IS LOW' : 'Secure Connection Established'}
-              </span>
-           </div>
-           {proctorAlerts > 0 && (
-             <div className="bg-red-600 text-white px-4 py-1.5 theme-rounded text-[10px] font-black uppercase tracking-widest shadow-xl animate-bounce">
-               Focus Alerts: {proctorAlerts}
-             </div>
-           )}
+          <div className="flex items-center gap-4">
+            <div className={`w-3 h-3 rounded-full ${isStressState ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              {isStressState ? 'HURRY - TIME IS LOW' : 'Secure Connection Established'}
+            </span>
+          </div>
+          {proctorAlerts > 0 && (
+            <div className="bg-red-600 text-white px-4 py-1.5 theme-rounded text-[10px] font-black uppercase tracking-widest shadow-xl animate-bounce">
+              Focus Alerts: {proctorAlerts}
+            </div>
+          )}
         </div>
 
         <div className={`bg-white dark:bg-slate-900 theme-rounded shadow-3xl overflow-hidden border-8 transition-all duration-700 ${isStressState ? 'border-red-500' : 'border-indigo-600'}`}>
@@ -154,30 +154,29 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
 
             {currentQuestion.imageUrl && (
               <div className="flex justify-center my-8">
-                 <img src={currentQuestion.imageUrl} className="max-w-full theme-rounded shadow-xl border-4 border-slate-100" alt="Question Resource" />
+                <img src={currentQuestion.imageUrl} className="max-w-full theme-rounded shadow-xl border-4 border-slate-100" alt="Question Resource" />
               </div>
             )}
 
             <div className="space-y-4">
               {currentQuestion.type === QuestionType.THEORY ? (
-                <textarea 
+                <textarea
                   className="w-full h-64 p-10 theme-rounded outline-none font-bold border-4 border-slate-100 dark:bg-slate-950 dark:border-slate-800 focus:border-indigo-500 transition-all text-xl"
                   placeholder="Enter your detailed answer here..."
                   value={answers[currentQuestion.id] || ''}
-                  onChange={e => setAnswers({...answers, [currentQuestion.id]: e.target.value})}
+                  onChange={e => setAnswers({ ...answers, [currentQuestion.id]: e.target.value })}
                 />
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {currentQuestion.options?.map((opt, idx) => {
                     const letter = String.fromCharCode(65 + idx);
-                    const isSelected = answers[currentQuestion.id] === letter;
+                    const isSelected = answers[currentQuestion.id] === opt;
                     return (
                       <button
                         key={idx}
-                        onClick={() => setAnswers({...answers, [currentQuestion.id]: letter})}
-                        className={`w-full flex items-center gap-6 p-6 theme-rounded border-4 transition-all text-left ${
-                          isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950'
-                        }`}
+                        onClick={() => setAnswers({ ...answers, [currentQuestion.id]: opt })}
+                        className={`w-full flex items-center gap-6 p-6 theme-rounded border-4 transition-all text-left ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950'
+                          }`}
                       >
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl ${isSelected ? 'bg-white text-indigo-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
                           {letter}
@@ -185,7 +184,8 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
                         <span className="font-black uppercase tracking-tight text-lg">{opt}</span>
                       </button>
                     );
-                  })}
+                  })
+                  }
                 </div>
               )}
             </div>
@@ -196,11 +196,11 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
               <button disabled={currentIndex === 0} onClick={() => setCurrentIndex(prev => prev - 1)} className="px-8 py-4 theme-rounded font-black uppercase text-xs tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400 disabled:opacity-20">Back</button>
               <button disabled={currentIndex === exam.questions.length - 1} onClick={() => setCurrentIndex(prev => prev + 1)} className="px-8 py-4 theme-rounded font-black uppercase text-xs tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400 disabled:opacity-20">Next</button>
             </div>
-            <button onClick={() => { if(confirm("Are you sure you want to finish and submit?")) handleSubmit(); }} className={`px-16 py-5 theme-rounded font-black uppercase tracking-[0.2em] shadow-2xl transition-all ${isStressState ? 'bg-red-600 text-white animate-bounce' : 'bg-slate-900 dark:bg-indigo-600 text-white'}`}>Submit Exam</button>
+            <button onClick={() => { if (confirm("Are you sure you want to finish and submit?")) handleSubmit(); }} className={`px-16 py-5 theme-rounded font-black uppercase tracking-[0.2em] shadow-2xl transition-all ${isStressState ? 'bg-red-600 text-white animate-bounce' : 'bg-slate-900 dark:bg-indigo-600 text-white'}`}>Submit Exam</button>
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
