@@ -39,8 +39,21 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Request failed: ${res.status}`);
+    let errorMessage = `Request failed: ${res.status}`;
+    try {
+      const text = await res.text();
+      try {
+        const data = JSON.parse(text);
+        if (data.error) errorMessage = data.error;
+      } catch {
+        // If not JSON, use the raw text (truncated if too long to avoid huge alerts)
+        // This catches Vercel HTML error pages
+        errorMessage = `Server Error (${res.status}): ${text.substring(0, 200)}`;
+      }
+    } catch (e) {
+      // Failed to read text
+    }
+    throw new Error(errorMessage);
   }
 
   // Some endpoints might return empty body (e.g. logout)
