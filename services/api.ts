@@ -30,7 +30,7 @@ const withLoading = async <T>(promise: Promise<T>): Promise<T> => {
 
 // Generic fetch wrapper
 const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
-  const res = await fetch(\`/api\${endpoint}\`, {
+  const res = await fetch(`/api${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -40,12 +40,12 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || \`Request failed: \${res.status}\`);
+    throw new Error(data.error || `Request failed: ${res.status}`);
   }
 
   // Some endpoints might return empty body (e.g. logout)
   if (res.status === 204) return {} as T;
-  
+
   return res.json();
 }
 
@@ -65,11 +65,11 @@ export const api = {
       await withLoading(request('/auth/logout', { method: 'POST' }));
     },
     register: async (userData: Partial<User>): Promise<User> => {
-       // Assuming we will implement register similarly
-       return withLoading(request<User>('/auth/register', {
-           method: 'POST',
-           body: JSON.stringify(userData)
-       }));
+      // Assuming we will implement register similarly
+      return withLoading(request<User>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData)
+      }));
     }
   },
 
@@ -79,43 +79,43 @@ export const api = {
     // Knowing they don't exist yet, this will fail if used.
     list: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams')),
     save: async (exam: Exam): Promise<Exam> => withLoading(request<Exam>('/exams', {
-        method: 'POST',
-        body: JSON.stringify(exam)
+      method: 'POST',
+      body: JSON.stringify(exam)
     })),
-    delete: async (id: string) => withLoading(request(\`/exams/\${id}\`, { method: 'DELETE' }))
+    delete: async (id: string) => withLoading(request(`/exams/${id}`, { method: 'DELETE' }))
   },
 
   submissions: {
     list: async (): Promise<Submission[]> => withLoading(request<Submission[]>('/submissions')),
     save: async (sub: Submission): Promise<Submission> => withLoading(request<Submission>('/submissions', {
-        method: 'POST',
-        body: JSON.stringify(sub)
+      method: 'POST',
+      body: JSON.stringify(sub)
     })),
-    update: async (sub: Submission): Promise<Submission | null> => withLoading(request<Submission>(\`/submissions/\${sub.id}\`, {
-        method: 'PUT',
-        body: JSON.stringify(sub)
+    update: async (sub: Submission): Promise<Submission | null> => withLoading(request<Submission>(`/submissions/${sub.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(sub)
     })),
-    delete: async (id: string) => withLoading(request(\`/submissions/\${id}\`, { method: 'DELETE' }))
+    delete: async (id: string) => withLoading(request(`/submissions/${id}`, { method: 'DELETE' }))
   },
 
   questions: {
     list: async (): Promise<Question[]> => withLoading(request<Question[]>('/questions')),
     save: async (question: Question): Promise<Question> => withLoading(request<Question>('/questions', {
-        method: 'POST',
-        body: JSON.stringify(question)
+      method: 'POST',
+      body: JSON.stringify(question)
     })),
-    delete: async (id: string) => withLoading(request(\`/questions/\${id}\`, { method: 'DELETE' }))
+    delete: async (id: string) => withLoading(request(`/questions/${id}`, { method: 'DELETE' }))
   },
 
   admin: {
-      // Placeholder for admin endpoints
-      getUsers: async (): Promise<User[]> => withLoading(request<User[]>('/admin/users')),
-      getLogs: async (): Promise<AuditLog[]> => withLoading(request<AuditLog[]>('/admin/logs')),
-      getAnnouncements: async (): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements')),
-      updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements', {
-          method: 'POST',
-          body: JSON.stringify(posts)
-      })),
-      backup: async (): Promise<any> => withLoading(request('/admin/backup')),
+    // Placeholder for admin endpoints
+    getUsers: async (): Promise<User[]> => withLoading(request<User[]>('/admin/users')),
+    getLogs: async (): Promise<AuditLog[]> => withLoading(request<AuditLog[]>('/admin/logs')),
+    getAnnouncements: async (): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements')),
+    updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements', {
+      method: 'POST',
+      body: JSON.stringify(posts)
+    })),
+    backup: async (): Promise<any> => withLoading(request('/admin/backup')),
   }
 };
