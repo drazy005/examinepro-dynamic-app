@@ -48,8 +48,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             role: newUser.role
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Registration error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: error.message || 'Internal server error' });
     }
 }
