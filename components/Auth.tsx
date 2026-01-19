@@ -54,8 +54,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       return;
     }
 
-    if (!validatePasswordStrength(password)) {
-      setError('Password too weak. Use 8+ chars, numbers, and symbols.');
+    // Simplified password check for development ease
+    if (password.length < 3) {
+      setError('Password must be at least 3 characters.');
       return;
     }
 
@@ -72,12 +73,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     setAuthView('reset_sent');
   };
 
-  const authBgStyle = branding.backgroundImage 
-    ? { backgroundImage: `url(${branding.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
+  const authBgStyle = branding.backgroundImage
+    ? { backgroundImage: `url(${branding.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : {};
 
   return (
-    <div 
+    <div
       className={`min-h-screen ${isDarkMode ? 'bg-slate-950' : 'bg-slate-900'} flex items-center justify-center p-4 transition-colors duration-500 relative`}
       style={authBgStyle}
     >
@@ -131,26 +132,26 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <form onSubmit={handleRegisterSubmit} className="p-10 space-y-5">
               {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-[10px] font-black uppercase rounded-xl border border-red-100 dark:border-red-900/30">{error}</div>}
               <div className="grid grid-cols-2 gap-4">
-                 <div className="col-span-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Identity</label>
-                    <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-bold" value={name} onChange={e => setName(e.target.value)} placeholder="Full Name" />
-                 </div>
-                 <div className="col-span-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Contact</label>
-                    <input type="email" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
-                 </div>
-                 <div className="col-span-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Secret</label>
-                    <input type="password" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
-                 </div>
-                 <div className="col-span-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Clearance</label>
-                    <select className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none text-slate-900 dark:text-white font-bold" value={role} onChange={e => setRole(e.target.value as UserRole)}>
-                      <option value={UserRole.BASIC}>Candidate (Standard)</option>
-                      <option value={UserRole.ADMIN}>Administrator</option>
-                      <option value={UserRole.SUPERADMIN}>Super Admin</option>
-                    </select>
-                 </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Identity</label>
+                  <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-bold" value={name} onChange={e => setName(e.target.value)} placeholder="Full Name" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Contact</label>
+                  <input type="email" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Secret</label>
+                  <input type="password" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Clearance</label>
+                  <select className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none text-slate-900 dark:text-white font-bold" value={role} onChange={e => setRole(e.target.value as UserRole)}>
+                    <option value={UserRole.BASIC}>Candidate (Standard)</option>
+                    <option value={UserRole.ADMIN}>Administrator</option>
+                    <option value={UserRole.SUPERADMIN}>Super Admin</option>
+                  </select>
+                </div>
               </div>
               <button type="submit" className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:brightness-110 mt-2" style={{ backgroundColor: branding.primaryColor }}>Create Credentials</button>
             </form>
@@ -176,8 +177,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           <div className="p-16 text-center space-y-8">
             <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner">📨</div>
             <div>
-               <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white mb-2">Verification Sent</h3>
-               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">A secure link has been dispatched to <b>{email}</b>. Please activate your terminal ID to proceed.</p>
+              <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white mb-2">Verification Sent</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">A secure link has been dispatched to <b>{email}</b>. Please activate your terminal ID to proceed.</p>
             </div>
             <button onClick={() => setAuthView('login')} className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg hover:brightness-110" style={{ backgroundColor: branding.primaryColor }}>Return to Login</button>
           </div>
@@ -187,8 +188,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           <div className="p-16 text-center space-y-8">
             <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner">🔐</div>
             <div>
-               <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white mb-2">Recovery Initiated</h3>
-               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">If this ID exists in our registry, recovery protocols have been emailed.</p>
+              <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white mb-2">Recovery Initiated</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">If this ID exists in our registry, recovery protocols have been emailed.</p>
             </div>
             <button onClick={() => setAuthView('login')} className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg hover:brightness-110" style={{ backgroundColor: branding.primaryColor }}>Return to Login</button>
           </div>
