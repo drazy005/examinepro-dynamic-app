@@ -26,7 +26,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleLogin(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    if (req.method !== 'POST') {
+        return res.status(405).json({
+            error: `Method not allowed. Received: ${req.method}, Expected: POST`,
+            debug: { action: req.query.action, query: req.query }
+        });
+    }
 
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Missing credentials' });
@@ -56,7 +61,12 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleRegister(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    if (req.method !== 'POST') {
+        return res.status(405).json({
+            error: `Method not allowed. Received: ${req.method}, Expected: POST`,
+            debug: { action: req.query.action }
+        });
+    }
 
     const { email, password, name } = req.body;
     if (!email || !password || !name) return res.status(400).json({ error: 'Missing fields' });
