@@ -1,8 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-// We test the local import which is the prime suspect
-import { authLib } from '../../lib/auth';
+// Fix: Correct path is ../lib/auth since we are in api/ (root/api)
+import { authLib } from '../lib/auth';
+
+console.log('Test Libs Loaded');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
