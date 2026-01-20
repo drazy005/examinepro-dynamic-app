@@ -123,9 +123,6 @@ export const api = {
     updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin?resource=announcements', {
       method: 'POST',
       body: JSON.stringify(posts)
-    }))
-  }
-};,
-backup: async (): Promise<any> => withLoading(request('/admin/backup')),
+    })),
   }
 };
