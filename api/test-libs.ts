@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 // Fix: Now we import from the bundled _lib directory in api
-import { authLib } from './_lib/auth';
+import { authLib } from './_lib/auth.js';
 
 console.log('Test Libs Loaded');
 
