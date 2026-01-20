@@ -65,21 +65,20 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
   auth: {
     me: async (): Promise<User | null> => {
-      return withLoading(request<User>('/auth/me').catch(() => null));
+      return withLoading(request<User>('/auth?action=me').catch(() => null));
     },
     login: async (email: string, pass: string): Promise<User> => {
-      const { user } = await withLoading(request<{ user: User }>('/auth/login', {
+      const { user } = await withLoading(request<{ user: User }>('/auth?action=login', {
         method: 'POST',
         body: JSON.stringify({ email, password: pass })
       }));
       return user;
     },
     logout: async () => {
-      await withLoading(request('/auth/logout', { method: 'POST' }));
+      await withLoading(request('/auth?action=logout', { method: 'POST' }));
     },
     register: async (userData: Partial<User>): Promise<User> => {
-      // Assuming we will implement register similarly
-      return withLoading(request<User>('/auth/register', {
+      return withLoading(request<User>('/auth?action=register', {
         method: 'POST',
         body: JSON.stringify(userData)
       }));
@@ -87,9 +86,6 @@ export const api = {
   },
 
   exams: {
-    // Placeholder for Phase 3 migration - temporarily throwing error or keeping old shim if needed
-    // But per plan, we assume these will be migrated. For now, let's point them to /api/exams
-    // Knowing they don't exist yet, this will fail if used.
     list: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams')),
     save: async (exam: Exam): Promise<Exam> => withLoading(request<Exam>('/exams', {
       method: 'POST',
@@ -121,14 +117,15 @@ export const api = {
   },
 
   admin: {
-    // Placeholder for admin endpoints
-    getUsers: async (): Promise<User[]> => withLoading(request<User[]>('/admin/users')),
-    getLogs: async (): Promise<AuditLog[]> => withLoading(request<AuditLog[]>('/admin/logs')),
-    getAnnouncements: async (): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements')),
-    updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements', {
+    getUsers: async (): Promise<User[]> => withLoading(request<User[]>('/admin?resource=users')),
+    getLogs: async (): Promise<AuditLog[]> => withLoading(request<AuditLog[]>('/admin?resource=logs')),
+    getAnnouncements: async (): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin?resource=announcements')),
+    updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin?resource=announcements', {
       method: 'POST',
       body: JSON.stringify(posts)
-    })),
-    backup: async (): Promise<any> => withLoading(request('/admin/backup')),
+    }))
+  }
+};,
+backup: async (): Promise<any> => withLoading(request('/admin/backup')),
   }
 };
