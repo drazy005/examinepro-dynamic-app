@@ -28,8 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function handleLogin(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({
-            error: `Method not allowed. Received: ${req.method}, Expected: POST`,
-            debug: { action: req.query.action, query: req.query }
+            error: `Method not allowed. Received: ${req.method}, Expected: POST`
         });
     }
 
@@ -63,8 +62,7 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
 async function handleRegister(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({
-            error: `Method not allowed. Received: ${req.method}, Expected: POST`,
-            debug: { action: req.query.action }
+            error: `Method not allowed. Received: ${req.method}, Expected: POST`
         });
     }
 
