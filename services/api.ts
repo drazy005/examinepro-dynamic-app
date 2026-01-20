@@ -65,20 +65,20 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
   auth: {
     me: async (): Promise<User | null> => {
-      return withLoading(request<User>('/auth?action=me').catch(() => null));
+      return withLoading(request<User>('/auth/me').catch(() => null));
     },
     login: async (email: string, pass: string): Promise<User> => {
-      const { user } = await withLoading(request<{ user: User }>('/auth?action=login', {
+      const { user } = await withLoading(request<{ user: User }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password: pass })
       }));
       return user;
     },
     logout: async () => {
-      await withLoading(request('/auth?action=logout', { method: 'POST' }));
+      await withLoading(request('/auth/logout', { method: 'POST' }));
     },
     register: async (userData: Partial<User>): Promise<User> => {
-      return withLoading(request<User>('/auth?action=register', {
+      return withLoading(request<User>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData)
       }));
@@ -117,10 +117,10 @@ export const api = {
   },
 
   admin: {
-    getUsers: async (): Promise<User[]> => withLoading(request<User[]>('/admin?resource=users')),
-    getLogs: async (): Promise<AuditLog[]> => withLoading(request<AuditLog[]>('/admin?resource=logs')),
-    getAnnouncements: async (): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin?resource=announcements')),
-    updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin?resource=announcements', {
+    getUsers: async (): Promise<User[]> => withLoading(request<User[]>('/admin/users')),
+    getLogs: async (): Promise<AuditLog[]> => withLoading(request<AuditLog[]>('/admin/logs')),
+    getAnnouncements: async (): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements')),
+    updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements', {
       method: 'POST',
       body: JSON.stringify(posts)
     })),
