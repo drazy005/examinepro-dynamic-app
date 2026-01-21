@@ -49,7 +49,7 @@ CREATE TABLE "Exam" (
 -- Create Question Table
 CREATE TABLE "Question" (
     "id" TEXT NOT NULL,
-    "examId" TEXT NOT NULL,
+    "examId" TEXT,
     "type" "QuestionType" NOT NULL,
     "text" TEXT NOT NULL,
     "imageUrl" TEXT,

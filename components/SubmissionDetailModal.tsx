@@ -133,7 +133,7 @@ const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   </div>
                   {isAdmin && (
                     <div className="p-6 bg-green-50 dark:bg-slate-950 rounded-xl border-l-[6px] border-green-500">
-                      <span className="block text-[10px] font-black uppercase tracking-widest text-green-600 mb-2">Correct Answer</span>
+                      <span className="block text-[10px] font-black uppercase tracking-widest text-green-600 mb-2">{q.type === QuestionType.THEORY ? 'Model Answer / Rubric' : 'Correct Answer'}</span>
                       <p className="font-medium text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{q.correctAnswer}</p>
                     </div>
                   )}

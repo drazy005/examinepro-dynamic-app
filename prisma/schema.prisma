@@ -85,7 +85,7 @@ model Exam {
 
 model Question {
   id            String       @id @default(uuid())
-  examId        String
+  examId        String?
   type          QuestionType
   text          String
   imageUrl      String?
@@ -96,7 +96,7 @@ model Question {
   
   createdAt     DateTime     @default(now())
 
-  exam          Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam          Exam?        @relation(fields: [examId], references: [id], onDelete: Cascade)
 }
 
 model Submission {
