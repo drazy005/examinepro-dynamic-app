@@ -15,13 +15,13 @@ import { useToast } from './services/ToastContext';
 const App: React.FC = () => {
   const { branding, isDarkMode, toggleDarkMode } = useSystem();
   const { addToast } = useToast();
-  
+
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
   const [isAdminPreview, setIsAdminPreview] = useState(false);
   const [announcements, setAnnouncements] = useState<BlogPost[]>([]);
-  
+
   // Local admin states (not part of core data hooks)
   const [templates, setTemplates] = useState<ExamTemplate[]>([]);
   const [questionBank, setQuestionBank] = useState<Question[]>([]);
@@ -52,13 +52,13 @@ const App: React.FC = () => {
     };
     checkSession();
   }, [handleLogout]);
-  
+
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser);
     // Fetch announcements on login
     api.admin.getAnnouncements().then(setAnnouncements);
   };
-  
+
   const handleSubmitExam = async (partialSub: Partial<Submission>) => {
     try {
       await api.submissions.save(partialSub as Submission);
@@ -81,37 +81,45 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (activeExam) {
-      return <ExamInterface 
-                exam={activeExam} 
-                studentId={user!.id} 
-                onSubmit={handleSubmitExam} 
-                onCancel={() => { setActiveExam(null); setIsAdminPreview(false); }} 
-                isAdminPreview={isAdminPreview} 
-              />;
+      return <ExamInterface
+        exam={activeExam}
+        studentId={user!.id}
+        onSubmit={handleSubmitExam}
+        onCancel={() => { setActiveExam(null); setIsAdminPreview(false); }}
+        isAdminPreview={isAdminPreview}
+      />;
     }
 
     switch (user?.role) {
       case UserRole.SUPERADMIN:
-        return <SuperAdminDashboard 
-                 dbConfigs={dbConfigs} 
-                 announcements={announcements}
-                 onUpdateAnnouncements={handleAnnouncementUpdate}
-                 onSaveDbConfig={c => setDbConfigs(p => p.some(x => x.id === c.id) ? p.map(x => x.id === c.id ? c : x) : [c, ...p])}
-                 onDeleteDbConfig={id => setDbConfigs(p => p.filter(x => x.id !== id))}
-               />;
+        return <SuperAdminDashboard
+          dbConfigs={dbConfigs}
+          announcements={announcements}
+          onUpdateAnnouncements={handleAnnouncementUpdate}
+          onSaveDbConfig={c => setDbConfigs(p => p.some(x => x.id === c.id) ? p.map(x => x.id === c.id ? c : x) : [c, ...p])}
+          onDeleteDbConfig={id => setDbConfigs(p => p.filter(x => x.id !== id))}
+        />;
       case UserRole.ADMIN:
-        return <AdminDashboard 
-                 questionBank={questionBank} 
-                 templates={templates}
-                 onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); }}
-               />;
+        return <AdminDashboard
+          questionBank={questionBank}
+          templates={templates}
+          onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); }}
+        />;
       case UserRole.BASIC:
-        return <StudentDashboard 
-                 announcements={announcements.filter(p => p.published)}
-                 onTakeExam={e => setActiveExam(e)} 
-               />;
+        return <StudentDashboard
+          announcements={announcements.filter(p => p.published)}
+          onTakeExam={e => setActiveExam(e)}
+        />;
       default:
-        return null;
+        console.warn('Unknown Role Encountered:', user.role);
+        return (
+          <div className="flex flex-col items-center justify-center p-10 text-center space-y-4">
+            <div className="text-6xl">🤔</div>
+            <h2 className="text-xl font-bold">Account Setup Incomplete</h2>
+            <p>Your account role <code>{user.role}</code> is not recognized.</p>
+            <button onClick={handleLogout} className="text-indigo-600 hover:underline">Logout</button>
+          </div>
+        );
     }
   };
 
@@ -120,7 +128,7 @@ const App: React.FC = () => {
   }
 
   if (!user) {
-    return <Auth onLogin={handleLogin} onRegister={() => {}} />;
+    return <Auth onLogin={handleLogin} onRegister={() => { }} />;
   }
 
   return (

@@ -96,7 +96,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             )}
           </div>
           <h1 className="text-3xl font-black tracking-tighter uppercase">{branding.appName}</h1>
-          <p className="text-white/80 text-[10px] font-black uppercase tracking-widest mt-2">Secure Assessment Terminal</p>
+          <p className="text-white/80 text-[10px] font-black uppercase tracking-widest mt-2">Secure Assessment Portal</p>
         </div>
 
         {authView === 'login' && (
@@ -108,17 +108,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <form onSubmit={handleLoginSubmit} className="p-10 space-y-6">
               {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-[10px] font-black uppercase rounded-xl border border-red-100 dark:border-red-900/30">{error}</div>}
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Terminal ID (Email)</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Email Address</label>
                 <input type="email" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 dark:focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-medium transition-all" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" />
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1 ml-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Key</label>
-                  <button type="button" onClick={() => setAuthView('forgot')} className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase hover:underline">Lost Key?</button>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password</label>
+                  <button type="button" onClick={() => setAuthView('forgot')} className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase hover:underline">Forgotten Password?</button>
                 </div>
                 <input type="password" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 dark:focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-medium transition-all" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
               </div>
-              <button type="submit" className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl active:scale-95 hover:brightness-110" style={{ backgroundColor: branding.primaryColor }}>Initialize Session</button>
+              <button type="submit" className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl active:scale-95 hover:brightness-110" style={{ backgroundColor: branding.primaryColor }}>Login</button>
             </form>
           </>
         )}
@@ -141,29 +141,29 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   <input type="email" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Secret</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Password</label>
                   <input type="password" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Clearance</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Role</label>
                   <select className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none text-slate-900 dark:text-white font-bold" value={role} onChange={e => setRole(e.target.value as UserRole)}>
-                    <option value={UserRole.BASIC}>Candidate (Standard)</option>
+                    <option value={UserRole.BASIC}>Candidate</option>
                     <option value={UserRole.ADMIN}>Administrator</option>
                     <option value={UserRole.SUPERADMIN}>Super Admin</option>
                   </select>
                 </div>
               </div>
-              <button type="submit" className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:brightness-110 mt-2" style={{ backgroundColor: branding.primaryColor }}>Create Credentials</button>
+              <button type="submit" className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:brightness-110 mt-2" style={{ backgroundColor: branding.primaryColor }}>Create Account</button>
             </form>
           </>
         )}
 
         {authView === 'forgot' && (
           <form onSubmit={handleForgotSubmit} className="p-10 space-y-6">
-            <h3 className="text-xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">Recover Access</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">System will generate a time-sensitive recovery link sent to your registered contact method.</p>
+            <h3 className="text-xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">Reset Password</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">We will send a password reset link to your email.</p>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Registered Email</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Email Address</label>
               <input type="email" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-medium" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" required />
             </div>
             <div className="flex gap-4 pt-2">
@@ -178,7 +178,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner">📨</div>
             <div>
               <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white mb-2">Verification Sent</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">A secure link has been dispatched to <b>{email}</b>. Please activate your terminal ID to proceed.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">A verification link has been sent to <b>{email}</b>. Please check your inbox.</p>
             </div>
             <button onClick={() => setAuthView('login')} className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg hover:brightness-110" style={{ backgroundColor: branding.primaryColor }}>Return to Login</button>
           </div>
@@ -188,8 +188,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           <div className="p-16 text-center space-y-8">
             <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner">🔐</div>
             <div>
-              <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white mb-2">Recovery Initiated</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">If this ID exists in our registry, recovery protocols have been emailed.</p>
+              <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white mb-2">Email Sent</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">If this email exists in our system, a reset link has been sent.</p>
             </div>
             <button onClick={() => setAuthView('login')} className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg hover:brightness-110" style={{ backgroundColor: branding.primaryColor }}>Return to Login</button>
           </div>

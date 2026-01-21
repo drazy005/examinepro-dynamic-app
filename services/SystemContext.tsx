@@ -17,15 +17,15 @@ const SystemContext = createContext<SystemContextType | undefined>(undefined);
 
 export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark' || 
+    return localStorage.getItem('theme') === 'dark' ||
       (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
 
-  const [settings, setSettingsState] = useState<SystemSettings>(() => 
+  const [settings, setSettingsState] = useState<SystemSettings>(() =>
     SecureStorage.load(STORAGE_KEYS.SYSTEM_SETTINGS, { aiEnabled: true, maintenanceMode: false })
   );
 
-  const [branding, setBrandingState] = useState<AppBranding>(() => 
+  const [branding, setBrandingState] = useState<AppBranding>(() =>
     SecureStorage.load(STORAGE_KEYS.BRANDING, {
       primaryColor: '#4f46e5',
       appName: 'ExaminePro',
