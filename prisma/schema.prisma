@@ -47,6 +47,10 @@ model User {
   name          String
   role          UserRole  @default(BASIC)
   isVerified    Boolean   @default(false)
+  verificationToken String?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  
   createdAt     DateTime  @default(now())
   lastActive    DateTime  @updatedAt
 

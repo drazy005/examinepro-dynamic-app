@@ -1,8 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
+import { emailLib } from '../_lib/email.js';
 import { parse } from 'cookie';
 import { UserRole } from '@prisma/client';
+import crypto from 'crypto';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query;
@@ -16,6 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'login': return await handleLogin(req, res);
             case 'register': return await handleRegister(req, res);
             case 'me': return await handleMe(req, res);
+            case 'forgot': return await handleForgot(req, res);
             case 'logout': return await handleLogout(req, res);
             default: return res.status(404).json({ error: 'Endpoint not found' });
         }
@@ -23,6 +26,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error(`Auth Error [${action}]:`, error);
         return res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
+}
+
+async function handleForgot(req: VercelRequest, res: VercelResponse) {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+
+    const user = await db.user.findUnique({ where: { email } });
+    if (user) {
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+
+        await db.user.update({
+            where: { id: user.id },
+            data: { resetToken, resetTokenExpiry }
+        });
+
+        try {
+            await emailLib.sendPasswordResetEmail(email, resetToken);
+        } catch (e) {
+            console.error('Failed to send reset email:', e);
+        }
+    }
+
+    // Always return success to prevent email enumeration
+    return res.status(200).json({ message: 'If email exists, reset link sent' });
 }
 
 async function handleLogin(req: VercelRequest, res: VercelResponse) {
@@ -76,9 +106,20 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
     const userCount = await db.user.count();
     const role = userCount === 0 ? UserRole.SUPERADMIN : UserRole.BASIC;
 
+    const verificationToken = crypto.randomBytes(32).toString('hex');
     const newUser = await db.user.create({
-        data: { email, name, passwordHash, role, isVerified: true }
+        data: {
+            email, name, passwordHash, role,
+            isVerified: false,
+            verificationToken
+        }
     });
+
+    try {
+        await emailLib.sendVerificationEmail(email, verificationToken);
+    } catch (e) {
+        console.error('Failed to send verification email:', e);
+    }
 
     const token = authLib.signToken({ userId: newUser.id, role: newUser.role });
     const cookie = authLib.createCookie(token);
