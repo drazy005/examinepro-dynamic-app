@@ -5,11 +5,42 @@ import { parse } from 'cookie';
 import { QuestionType, GradingStatus } from '@prisma/client';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
     const cookies = parse(req.headers.cookie || '');
     const user = authLib.verifyToken(cookies.auth_token || '');
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    // GET: List Submissions
+    if (req.method === 'GET') {
+        const { mode } = req.query;
+
+        try {
+            if (mode === 'history') {
+                // Candidate View: Own submissions
+                const mySubmissions = await db.submission.findMany({
+                    where: { userId: user.userId },
+                    orderBy: { submittedAt: 'desc' }
+                });
+                return res.status(200).json(mySubmissions);
+            }
+
+            // Admin View: All submissions
+            const role = user.role as string;
+            if (role !== 'ADMIN' && role !== 'TUTOR' && role !== 'SUPERADMIN') {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+
+            const submissions = await db.submission.findMany({
+                include: { user: { select: { name: true, email: true } } }, // Join user info
+                orderBy: { submittedAt: 'desc' }
+            });
+            return res.status(200).json(submissions);
+
+        } catch (e) {
+            return res.status(500).json({ error: 'Failed to fetch submissions' });
+        }
+    }
+
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
         const { examId, answers, timeSpentMs } = req.body; // answers: Record<string, string>

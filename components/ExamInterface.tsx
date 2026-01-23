@@ -107,7 +107,10 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const isStressState = timeLeft < 300;
+  // Determine warning threshold (default 5 minutes if not set in exam)
+  const warningThreshold = (exam.warningTimeThreshold ?? 5) * 60;
+  const isStressState = timeLeft < warningThreshold;
+  // Heartbeat Effect: Visual pulse implemented via CSS classes in render below
 
   return (
     <div className={`w-full min-h-screen flex flex-col justify-center transition-all duration-700 bg-slate-50 dark:bg-slate-950`}>

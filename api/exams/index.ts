@@ -14,7 +14,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: List Exams
     if (req.method === 'GET') {
+        const { mode } = req.query;
+
         try {
+            if (mode === 'available') {
+                // Candidate View: Only published, active exams
+                const now = new Date();
+                const availableExams = await db.exam.findMany({
+                    where: {
+                        published: true,
+                        // TODO: Add startDate/endDate logic if schema supports it
+                    },
+                    select: {
+                        id: true,
+                        title: true,
+                        description: true,
+                        category: true,
+                        difficulty: true,
+                        durationMinutes: true,
+                        totalPoints: true,
+                        // NO questions returned here
+                    },
+                    orderBy: { createdAt: 'desc' }
+                });
+                return res.status(200).json(availableExams);
+            }
+
+            // Admin View: All exams with questions
+            const role = user.role as string;
+            // Use string checks to be safe against stale Prisma Client enums
+            if (role !== 'ADMIN' && role !== 'TUTOR' && role !== 'SUPERADMIN') {
+                // Fallback for basic users querying without mode
+                return res.status(403).json({ error: 'Access denied' });
+            }
+
             const exams = await db.exam.findMany({
                 include: {
                     questions: {
@@ -24,7 +57,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             type: true,
                             options: true,
                             points: true,
-                            // EXCLUDING correctAnswer for security in list view (though usually list doesn't include questions at all to save bandwidth)
                         }
                     }
                 },
@@ -38,7 +70,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST: Create Exam
     if (req.method === 'POST') {
-        if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPERADMIN) {
+        const role = user.role as string;
+        if (role !== 'ADMIN' && role !== 'TUTOR' && role !== 'SUPERADMIN') {
             return res.status(403).json({ error: 'Forbidden' });
         }
 

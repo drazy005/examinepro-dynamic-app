@@ -1,7 +1,8 @@
 
 export enum UserRole {
   SUPERADMIN = 'SUPERADMIN',
-  ADMIN = 'ADMIN',
+  ADMIN = 'ADMIN', // Deprecated, migrate to TUTOR
+  TUTOR = 'TUTOR',
   BASIC = 'BASIC'
 }
 
@@ -59,15 +60,24 @@ export enum SimulatedProfile {
 }
 
 export interface SystemSettings {
-  aiEnabled: boolean;
-  maintenanceMode: boolean;
+  aiGlobalEnabled: boolean;
+  aiQuestionGenEnabled: boolean;
+  aiGradingEnabled: boolean;
+  themePrimaryColor: string;
+  themeSecondaryColor?: string;
+  themeFontFamily: string;
+  themeMode: 'light' | 'dark' | 'system';
+  themeLogoUrl?: string;
+  themeFaviconUrl?: string;
+  themeBackgroundUrl?: string;
+  themeBackgroundStyle?: string;
 }
 
 export interface AppBranding {
   primaryColor: string;
   appName: string;
-  appIcon: string; 
-  bannerImage: string; 
+  appIcon: string;
+  bannerImage: string;
   backgroundImage: string;
   borderRadius: string; // "0px" | "8px" | "16px" | "32px" | "64px"
   fontFamily: 'sans' | 'mono' | 'serif';

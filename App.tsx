@@ -4,7 +4,7 @@ import { User, Exam, Submission, UserRole, BlogPost, ExamTemplate, Question, Dat
 import Layout from './components/Layout';
 import AdminDashboard from './components/AdminDashboard';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
-import StudentDashboard from './components/StudentDashboard';
+import CandidatePortal from './components/CandidatePortal';
 import ExamInterface from './components/ExamInterface';
 import Auth from './components/Auth';
 import { initializeCspMonitoring } from './services/securityService';
@@ -22,7 +22,7 @@ const App: React.FC = () => {
   const [isAdminPreview, setIsAdminPreview] = useState(false);
   const [announcements, setAnnouncements] = useState<BlogPost[]>([]);
 
-  // Local admin states (not part of core data hooks)
+  // Local admin states
   const [templates, setTemplates] = useState<ExamTemplate[]>([]);
   const [questionBank, setQuestionBank] = useState<Question[]>([]);
   const [dbConfigs, setDbConfigs] = useState<DatabaseConfig[]>([]);
@@ -55,7 +55,6 @@ const App: React.FC = () => {
 
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser);
-    // Fetch announcements on login
     api.admin.getAnnouncements().then(setAnnouncements);
   };
 
@@ -90,6 +89,7 @@ const App: React.FC = () => {
       />;
     }
 
+    // Role-Based Routing
     switch (user?.role) {
       case UserRole.SUPERADMIN:
         return <SuperAdminDashboard
@@ -99,25 +99,28 @@ const App: React.FC = () => {
           onSaveDbConfig={c => setDbConfigs(p => p.some(x => x.id === c.id) ? p.map(x => x.id === c.id ? c : x) : [c, ...p])}
           onDeleteDbConfig={id => setDbConfigs(p => p.filter(x => x.id !== id))}
         />;
+
+      // ADMIN is deprecated but kept for fallback; effectively same as TUTOR
       case UserRole.ADMIN:
+      case UserRole.TUTOR:
         return <AdminDashboard
           questionBank={questionBank}
           templates={templates}
           onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); }}
         />;
+
       case UserRole.BASIC:
-        return <StudentDashboard
+        return <CandidatePortal
           announcements={announcements.filter(p => p.published)}
           onTakeExam={e => setActiveExam(e)}
         />;
+
       default:
-        console.warn('Unknown Role Encountered:', user.role);
         return (
           <div className="flex flex-col items-center justify-center p-10 text-center space-y-4">
-            <div className="text-6xl">🤔</div>
-            <h2 className="text-xl font-bold">Account Setup Incomplete</h2>
-            <p>Your account role <code>{user.role}</code> is not recognized.</p>
-            <button onClick={handleLogout} className="text-indigo-600 hover:underline">Logout</button>
+            <h2 className="text-xl font-bold">Role Error</h2>
+            <p>Your role <code>{user?.role}</code> is unrecognized or lacks permissions.</p>
+            <button onClick={handleLogout} className="text-red-600 hover:underline">Logout</button>
           </div>
         );
     }

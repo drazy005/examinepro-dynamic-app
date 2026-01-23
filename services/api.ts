@@ -87,6 +87,7 @@ export const api = {
 
   exams: {
     list: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams')),
+    listAvailable: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams?mode=available')), 
     save: async (exam: Exam): Promise<Exam> => withLoading(request<Exam>('/exams', {
       method: 'POST',
       body: JSON.stringify(exam)
@@ -96,6 +97,7 @@ export const api = {
 
   submissions: {
     list: async (): Promise<Submission[]> => withLoading(request<Submission[]>('/submissions')),
+    listMyHistory: async (): Promise<Submission[]> => withLoading(request<Submission[]>('/submissions?mode=history')),
     save: async (sub: Submission): Promise<Submission> => withLoading(request<Submission>('/submissions', {
       method: 'POST',
       body: JSON.stringify(sub)
@@ -123,6 +125,11 @@ export const api = {
     updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements', {
       method: 'POST',
       body: JSON.stringify(posts)
+    })),
+    getSettings: async (): Promise<any> => withLoading(request<any>('/settings')),
+    updateSettings: async (settings: any): Promise<any> => withLoading(request<any>('/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings)
     })),
   }
 };

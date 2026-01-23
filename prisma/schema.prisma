@@ -40,6 +40,12 @@ enum GradingStatus {
   GRADED
 }
 
+enum ResultReleaseMode {
+  MANUAL
+  SCHEDULED
+  INSTANT
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -66,6 +72,10 @@ model Exam {
   category        String        @default("General")
   difficulty      Difficulty    @default(MEDIUM)
   durationMinutes Int           @default(30)
+  warningTimeThreshold Int?     @default(5)
+  resultReleaseMode ResultReleaseMode @default(MANUAL)
+  scheduledReleaseDate DateTime?
+  showMcqScoreImmediately Boolean @default(false)
   passMark        Float         @default(50)
   totalPoints     Float         @default(0)
   published       Boolean       @default(false)
