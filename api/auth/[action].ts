@@ -3,7 +3,7 @@ import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
 import { emailLib } from '../_lib/email.js';
 import { parse } from 'cookie';
-import { UserRole } from '@prisma/client';
+
 import crypto from 'crypto';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -41,7 +41,7 @@ async function handleForgot(req: VercelRequest, res: VercelResponse) {
 
         await db.user.update({
             where: { id: user.id },
-            data: { resetToken, resetTokenExpiry }
+            data: { resetToken, resetTokenExpiry } as any
         });
 
         try {
@@ -104,7 +104,7 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
 
     const passwordHash = await authLib.hashPassword(password);
     const userCount = await db.user.count();
-    const role = userCount === 0 ? UserRole.SUPERADMIN : UserRole.BASIC;
+    const role = userCount === 0 ? 'SUPERADMIN' : 'BASIC';
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const newUser = await db.user.create({
@@ -112,7 +112,7 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
             email, name, passwordHash, role,
             isVerified: false,
             verificationToken
-        }
+        } as any
     });
 
     try {

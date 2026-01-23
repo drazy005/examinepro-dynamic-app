@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
 import { parse } from 'cookie';
-import { UserRole } from '@prisma/client';
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cookies = parse(req.headers.cookie || '');

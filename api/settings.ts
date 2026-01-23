@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
 import { parse } from 'cookie';
-import { UserRole } from '@prisma/client';
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cookies = parse(req.headers.cookie || '');
@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 1. GET Public Settings (Theme, etc.) - No Auth needed (or lightweight)
     if (req.method === 'GET') {
         try {
-            const settings = await db.systemSettings.findMany();
+            const settings = await (db as any).systemSettings.findMany();
             const config: Record<string, string> = {};
             settings.forEach(s => config[s.key] = s.value);
             return res.status(200).json(config);
@@ -25,13 +25,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!token) return res.status(401).json({ error: 'No session' });
 
         const payload = authLib.verifyToken(token);
-        if (!payload || payload.role !== UserRole.SUPERADMIN) {
+        if (!payload || (payload.role as string) !== 'SUPERADMIN') {
             return res.status(403).json({ error: 'Unauthorized: Superadmin only' });
         }
 
         const updates: Record<string, any> = req.body;
         const prismaPromises = Object.entries(updates).map(([key, value]) =>
-            db.systemSettings.upsert({
+            (db as any).systemSettings.upsert({
                 where: { key },
                 update: { value: String(value) },
                 create: { key, value: String(value) }

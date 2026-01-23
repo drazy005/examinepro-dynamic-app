@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
 import { parse } from 'cookie';
-import { UserRole } from '@prisma/client';
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { resource } = req.query;
@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = authLib.verifyToken(token);
-    if (!user || (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPERADMIN)) {
+    if (!user || ((user.role as string) !== 'ADMIN' && (user.role as string) !== 'SUPERADMIN' && (user.role as string) !== 'TUTOR')) {
         return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -39,7 +39,7 @@ async function handleUsers(req: VercelRequest, res: VercelResponse, user: any) {
         const users = await db.user.findMany({
             select: {
                 id: true, name: true, email: true, role: true, isVerified: true, lastActive: true, createdAt: true
-            },
+            } as any,
             orderBy: { createdAt: 'desc' }
         });
         return res.status(200).json(users);
@@ -48,7 +48,7 @@ async function handleUsers(req: VercelRequest, res: VercelResponse, user: any) {
 }
 
 async function handleLogs(req: VercelRequest, res: VercelResponse, user: any) {
-    if (user.role !== UserRole.SUPERADMIN) return res.status(403).json({ error: 'Forbidden' });
+    if ((user.role as string) !== 'SUPERADMIN') return res.status(403).json({ error: 'Forbidden' });
 
     if (req.method === 'GET') {
         const logs = await db.auditLog.findMany({
@@ -80,7 +80,7 @@ async function handleAnnouncements(req: VercelRequest, res: VercelResponse, user
     }
 
     if (req.method === 'POST') {
-        if (user.role !== UserRole.SUPERADMIN) return res.status(403).json({ error: 'Forbidden' });
+        if ((user.role as string) !== 'SUPERADMIN') return res.status(403).json({ error: 'Forbidden' });
 
         const posts = req.body;
         if (!Array.isArray(posts)) return res.status(400).json({ error: 'Invalid format' });

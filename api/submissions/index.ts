@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
 import { parse } from 'cookie';
-import { QuestionType, GradingStatus } from '@prisma/client';
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cookies = parse(req.headers.cookie || '');
@@ -62,14 +62,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const userAnswer = answers[q.id];
             const result: any = { score: 0, isCorrect: false };
 
-            if (q.type === QuestionType.MCQ || q.type === QuestionType.SBA) {
+            if (q.type === 'MCQ' || q.type === 'SBA') {
                 // Strict string comparison for objective questions
                 if (userAnswer === q.correctAnswer) {
                     result.score = q.points;
                     result.isCorrect = true;
                     totalScore += q.points;
                 }
-            } else if (q.type === QuestionType.THEORY) {
+            } else if (q.type === 'THEORY') {
                 // Theory questions default to 0 and flagged for manual review
                 result.score = 0;
                 requiresManualGrading = true;
@@ -87,7 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 questionResults,
                 score: totalScore,
                 timeSpentMs,
-                status: requiresManualGrading ? GradingStatus.PENDING_MANUAL_REVIEW : GradingStatus.GRADED,
+                status: requiresManualGrading ? 'PENDING_MANUAL_REVIEW' : 'GRADED',
                 graded: !requiresManualGrading, // If all MCQ, it's graded.
                 resultsReleased: exam.resultRelease === 'INSTANT',
             }

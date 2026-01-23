@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../../_lib/db.js';
 import { authLib } from '../../_lib/auth.js';
 import { parse } from 'cookie';
-import { UserRole } from '@prisma/client';
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -12,7 +12,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = cookies.auth_token;
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     const user = authLib.verifyToken(token);
-    if (!user || (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPERADMIN)) {
+    const role = user.role as string;
+    if (!user || (role !== 'ADMIN' && role !== 'TUTOR' && role !== 'SUPERADMIN')) {
         return res.status(403).json({ error: 'Forbidden' });
     }
 
