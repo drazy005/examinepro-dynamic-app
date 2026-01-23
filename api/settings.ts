@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 1. GET Public Settings (Theme, etc.) - No Auth needed (or lightweight)
     if (req.method === 'GET') {
         try {
-            const settings = await (db as any).systemSettings.findMany();
+            const settings = await db.systemSettings.findMany();
             const config: Record<string, string> = {};
             settings.forEach(s => config[s.key] = s.value);
             return res.status(200).json(config);
@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const updates: Record<string, any> = req.body;
         const prismaPromises = Object.entries(updates).map(([key, value]) =>
-            (db as any).systemSettings.upsert({
+            db.systemSettings.upsert({
                 where: { key },
                 update: { value: String(value) },
                 create: { key, value: String(value) }

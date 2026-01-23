@@ -15,6 +15,7 @@ enum UserRole {
   BASIC
   ADMIN
   SUPERADMIN
+  TUTOR
 }
 
 enum QuestionType {
@@ -150,4 +151,9 @@ model BlogPost {
   updatedAt   DateTime @updatedAt
 
   author      User     @relation(fields: [authorId], references: [id])
+}
+
+model SystemSettings {
+  key   String @id
+  value String
 }
