@@ -100,8 +100,6 @@ const App: React.FC = () => {
           onDeleteDbConfig={id => setDbConfigs(p => p.filter(x => x.id !== id))}
         />;
 
-      // ADMIN is deprecated but kept for fallback; effectively same as TUTOR
-      case UserRole.ADMIN:
       case UserRole.TUTOR:
         return <AdminDashboard
           questionBank={questionBank}
@@ -109,7 +107,7 @@ const App: React.FC = () => {
           onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); }}
         />;
 
-      case UserRole.BASIC:
+      case UserRole.CANDIDATE:
         return <CandidatePortal
           announcements={announcements.filter(p => p.published)}
           onTakeExam={e => setActiveExam(e)}

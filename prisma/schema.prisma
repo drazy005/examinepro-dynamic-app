@@ -12,10 +12,9 @@ datasource db {
 }
 
 enum UserRole {
-  BASIC
-  ADMIN
-  SUPERADMIN
+  CANDIDATE
   TUTOR
+  SUPERADMIN
 }
 
 enum QuestionType {
@@ -52,7 +51,7 @@ model User {
   email         String    @unique
   passwordHash  String
   name          String
-  role          UserRole  @default(BASIC)
+  role          UserRole  @default(CANDIDATE)
   isVerified    Boolean   @default(false)
   verificationToken String?
   resetToken       String?

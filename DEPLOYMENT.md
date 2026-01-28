@@ -42,6 +42,14 @@ Before deploying the code, you must sync your database schema with Supabase.
     ```
     This will create the tables (`User`, `Exam`, `Submission`, etc.) in your Supabase database.
 
+> **IMPORTANT: Manual Migration Workaround**
+> If you encounter connection errors (e.g., P1001) or cannot connect locally, you must run the provided SQL scripts directly in the **Supabase SQL Editor** in this exact order:
+> 1. `migration_step1_enums.sql` (Adds User Roles)
+> 2. `migration_step2_data.sql` (Updates User Data)
+> 3. `migration_step3_schema_update.sql` (Updates Exam/Submission Headers)
+>
+> Once these are run, your database will be ready for deployment even if `prisma db push` fails locally.
+
 ## 4. Vercel Deployment
 
 1.  **Push Code to GitHub**: Ensure your latest changes (including `package.json` updates and `vercel.json`) are pushed to your main branch.

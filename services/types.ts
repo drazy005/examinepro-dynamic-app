@@ -1,9 +1,8 @@
 
 export enum UserRole {
   SUPERADMIN = 'SUPERADMIN',
-  ADMIN = 'ADMIN', // Deprecated, migrate to TUTOR
   TUTOR = 'TUTOR',
-  BASIC = 'BASIC'
+  CANDIDATE = 'CANDIDATE'
 }
 
 export enum QuestionType {

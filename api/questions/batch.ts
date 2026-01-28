@@ -24,37 +24,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Validate basic structure
-        const validQuestions = questions.map(q => ({
-            id: q.id, // Optional, db handles it usually but we might pass it
-            examId: q.examId || '', // Just store in bank if empty, but schema requires examId?
-            // Wait, schema says examId is mandatory and relates to Exam.
-            // If these are "General Bank" questions, we might need a dummy Exam or make examId optional?
-            // Let's check schema.
-            // Checking: model Question { examId String ... }
-            // So every question MUST belong to an exam. 
-            // In the AdminDashboard "Question Bank" view, they often don't belong to a specific exam yet?
-            // Actually the current `saveQuestion` likely assigns them to a default or handling it.
-            // Let's assume the user selects a "Target Exam" or we create a "Question Bank" holder exam.
-            // OR we fix the schema to make examId optional?
-            // Let's fix schema to make examId optional if we want a true global bank.
-            // For now, I'll assume usage is: Import to specific Exam OR Import to Bank (which might need a dummy ID).
+        // Validate and insert
+        // Since sqlite/some providers don't support createMany with relations well or we might need individual IDs?
+        // Prisma `createMany` is supported in Postgres.
 
+        const validQuestions = questions.map(q => ({
             type: q.type || 'MCQ',
             text: q.text || 'Untitled Question',
             options: q.options || [],
             correctAnswer: q.correctAnswer || '',
             points: q.points || 1,
-            // If schema requires examId, we must provide one. 
-            // I will default to a 'Bank' exam if not provided, assuming one exists or handled by frontend?
-            // Better: update schema to make examId optional?
-            // Let's stick to updating the SCHEMA first to allow global questions.
+            // examId is optional in schema (String?), so undefined/null is fine.
+            // But we must NOT pass empty string if it expects nullable relation.
+            // If q.examId is missing, leave it undefined.
+            examId: q.examId || undefined
         }));
 
-        // STOP: I need to check schema first. If examId is required, I can't just bulk insert without it.
-        // I'll make the API attempt it, but if it fails, I'll know. 
-        // Actually, let's update the schema in parallel. 
+        const result = await db.question.createMany({
+            data: validQuestions as any
+        });
+
+        return res.status(200).json({ success: true, count: result.count });
+
     } catch (error: any) {
-        return res.status(500).json({ error: error.message });
+        console.error('Batch import error:', error);
+        return res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 }
-// Placeholder - I will rewrite this after schema check.

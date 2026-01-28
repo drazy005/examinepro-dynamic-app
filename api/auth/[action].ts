@@ -104,7 +104,7 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
 
     const passwordHash = await authLib.hashPassword(password);
     const userCount = await db.user.count();
-    const role = userCount === 0 ? 'SUPERADMIN' : 'BASIC';
+    const role = userCount === 0 ? 'SUPERADMIN' : 'CANDIDATE';
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const newUser = await db.user.create({
