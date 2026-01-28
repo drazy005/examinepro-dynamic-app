@@ -48,10 +48,21 @@ Before deploying the code, you must sync your database schema with Supabase.
 > 2. `migration_step2_data.sql` (Updates User Data)
 > 3. `migration_step3_schema_update.sql` (Updates Exam/Submission Headers)
 > 4. `migration_step4_fix_roles.sql` (Cleans up invalid roles)
+> 5. `migration_step5_final_cleanup.sql` (Final Role Cleanup: ADMIN->TUTOR, BASIC->CANDIDATE)
 >
 > Once these are run, your database will be ready for deployment even if `prisma db push` fails locally.
 
-## 4. Vercel Deployment
+## 5. Debugging Tools
+
+### Email Troubleshooting
+If emails are not sending:
+1.  Verify `SMTP_PASS` is your **Google App Password** (not login password).
+2.  Deploy the latest code.
+3.  Visit this link in your browser:
+    `https://<your-project>.vercel.app/api/test-email?to=your-email@example.com`
+4.  It will display the exact error from the server (e.g., "Invalid Login").
+
+## 6. Vercel Deployment
 
 1.  **Push Code to GitHub**: Ensure your latest changes (including `package.json` updates and `vercel.json`) are pushed to your main branch.
 2.  **Import Project in Vercel**:
