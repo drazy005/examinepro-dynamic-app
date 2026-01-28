@@ -7,26 +7,42 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_FROM = process.env.SMTP_FROM || '"ExaminePro System" <noreply@examinepro.com>';
 
 // Create reusable transporter
-const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465, // true for 465, false for other ports
-    auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-    },
-});
+// Create reusable transporter lazily
+let transporter: nodemailer.Transporter | null = null;
+
+const getTransporter = () => {
+    if (transporter) return transporter;
+
+    if (!SMTP_HOST) return null;
+
+    try {
+        transporter = nodemailer.createTransport({
+            host: SMTP_HOST,
+            port: SMTP_PORT,
+            secure: SMTP_PORT === 465, // true for 465, false for other ports
+            auth: {
+                user: SMTP_USER,
+                pass: SMTP_PASS,
+            },
+        });
+        return transporter;
+    } catch (e) {
+        console.error('Failed to create email transporter:', e);
+        return null;
+    }
+};
 
 export const emailLib = {
     sendVerificationEmail: async (to: string, token: string) => {
-        if (!SMTP_HOST) {
-            console.log('Skipping email (no SMTP_HOST):', to, token);
+        const mailer = getTransporter();
+        if (!mailer) {
+            console.log('Skipping email (no SMTP_HOST or invalid config):', to, token);
             return;
         }
 
         const link = `${process.env.APP_URL || 'http://localhost:3000'}/verify?token=${token}`;
 
-        await transporter.sendMail({
+        await mailer.sendMail({
             from: SMTP_FROM,
             to,
             subject: 'Verify your Account - ExaminePro',
@@ -42,11 +58,12 @@ export const emailLib = {
     },
 
     sendPasswordResetEmail: async (to: string, token: string) => {
-        if (!SMTP_HOST) return;
+        const mailer = getTransporter();
+        if (!mailer) return;
 
         const link = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
 
-        await transporter.sendMail({
+        await mailer.sendMail({
             from: SMTP_FROM,
             to,
             subject: 'Reset Password - ExaminePro',

@@ -75,5 +75,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
+    // PUT: Update Submission (Manual Grading / Results Release)
+    if (req.method === 'PUT') {
+        // Only Admin/Tutor can update submissions directly (e.g. grading)
+        if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+
+        try {
+            const updates = req.body;
+            delete updates.id; // Prevent ID change
+            delete updates.userId; // Prevent User change
+            delete updates.examId; // Prevent Exam change
+
+            const updated = await db.submission.update({
+                where: { id },
+                data: {
+                    ...updates,
+                    // Ensure we can update questionResults, score, gradingStatus, resultsReleased
+                }
+            });
+            return res.status(200).json(updated);
+        } catch (e) {
+            console.error(e);
+            return res.status(500).json({ error: 'Failed to update submission' });
+        }
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
 }

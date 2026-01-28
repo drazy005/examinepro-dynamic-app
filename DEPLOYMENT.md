@@ -62,6 +62,12 @@ If emails are not sending:
     `https://<your-project>.vercel.app/api/test-email?to=your-email@example.com`
 4.  It will display the exact error from the server (e.g., "Invalid Login").
 
+6.  **Admin Dashboard Usage**:
+    *   **Question Bank**: Tutors can now add/import questions directly.
+    *   **Grading**: Open a submission transcript to perform Manual Grading (updates score instantly).
+    *   **Release Results**: Use "Release Results" on an exam or submission to show delayed scores to candidates.
+    *   **User Roles**: Tutors are correctly recognized. Admin role is mapped to Tutor for code consistency.
+
 ## 6. Vercel Deployment
 
 1.  **Push Code to GitHub**: Ensure your latest changes (including `package.json` updates and `vercel.json`) are pushed to your main branch.

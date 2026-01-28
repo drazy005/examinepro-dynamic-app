@@ -25,6 +25,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ success: true });
     }
 
+    // GET: List Questions
+    if (req.method === 'GET') {
+        const questions = await db.question.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+        return res.status(200).json(questions);
+    }
+
     // POST: Create/Update Question (Independent of Exam)
     if (req.method === 'POST') {
         // Use this for adding questions to the bank directly

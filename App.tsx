@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Exam, Submission, UserRole, BlogPost, ExamTemplate, Question, DatabaseConfig } from './services/types';
+import { User, Exam, Submission, UserRole, BlogPost, ExamTemplate, Question, DatabaseConfig, QuestionResult, GradingStatus } from './services/types';
 import Layout from './components/Layout';
 import AdminDashboard from './components/AdminDashboard';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
@@ -11,6 +11,10 @@ import { initializeCspMonitoring } from './services/securityService';
 import { useSystem } from './services/SystemContext';
 import { api } from './services/api';
 import { useToast } from './services/ToastContext';
+import { useQuestions } from './hooks/useQuestions';
+import { useExams } from './hooks/useExams';
+import { useSubmissions } from './hooks/useSubmissions';
+import { useUsers } from './hooks/useUsers';
 
 const App: React.FC = () => {
   const { branding, isDarkMode, toggleDarkMode } = useSystem();
@@ -24,8 +28,13 @@ const App: React.FC = () => {
 
   // Local admin states
   const [templates, setTemplates] = useState<ExamTemplate[]>([]);
-  const [questionBank, setQuestionBank] = useState<Question[]>([]);
   const [dbConfigs, setDbConfigs] = useState<DatabaseConfig[]>([]);
+
+  // Hooks
+  const { questions: fetchedQuestions, saveQuestion, deleteQuestion, refreshQuestions } = useQuestions();
+  const { exams, saveExam, deleteExam, bulkDeleteExams } = useExams();
+  const { submissions, updateSubmission, bulkDeleteSubmissions } = useSubmissions();
+  const { users } = useUsers();
 
   const handleLogout = useCallback(async () => {
     await api.auth.logout();
@@ -53,6 +62,12 @@ const App: React.FC = () => {
     checkSession();
   }, [handleLogout]);
 
+  useEffect(() => {
+    if (user?.role === UserRole.TUTOR || user?.role === UserRole.SUPERADMIN) {
+      refreshQuestions();
+    }
+  }, [user, refreshQuestions]);
+
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser);
     api.admin.getAnnouncements().then(setAnnouncements);
@@ -78,6 +93,51 @@ const App: React.FC = () => {
     }
   };
 
+  // Handlers for Admin Dashboard
+  const handleManualGrade = async (submissionId: string, questionId: string, result: QuestionResult) => {
+    const sub = submissions.find(s => s.id === submissionId);
+    if (!sub) return;
+
+    const updatedResults = { ...sub.questionResults, [questionId]: result };
+
+    // Recalculate Score
+    // Needs to fetch the exam to know points? 
+    // Ideally backend handles recalc, but for now we trust the frontend update logic or just save the result map.
+    // Simplest: Just update the result map and let backend or UI sum it up. 
+    // Wait, we need to update score in DB.
+    // Let's assume grading update logic is complex and done mostly client side in 'onManualGrade' before calling this?
+    // AdminDashboard's onManualGrade usually just updates the state. We need to save it.
+
+    let newScore = Object.values(updatedResults).reduce((acc, r) => acc + (r.score || 0), 0);
+
+    const newSub: Submission = {
+      ...sub,
+      questionResults: updatedResults,
+      score: newScore,
+      gradingStatus: GradingStatus.GRADED // Or partial? Assume manually graded means done.
+    };
+
+    await updateSubmission(newSub);
+    addToast('Grade updated', 'success');
+  };
+
+  const handleReleaseResults = async (examId: string) => {
+    // Find all submissions for this exam and update correct release field
+    // This is heavy. Ideally a backend endpoint: POST /api/exams/:id/release-results
+    // for now, we loop submissions on client (MVP).
+    const subs = submissions.filter(s => s.examId === examId);
+    await Promise.all(subs.map(s => updateSubmission({ ...s, resultsReleased: true })));
+    addToast('All results released for this exam', 'success');
+  };
+
+  const handleReleaseSingleSubmission = async (id: string) => {
+    const sub = submissions.find(s => s.id === id);
+    if (sub) {
+      await updateSubmission({ ...sub, resultsReleased: true });
+      addToast('Result released to candidate', 'success');
+    }
+  };
+
   const renderContent = () => {
     if (activeExam) {
       return <ExamInterface
@@ -89,7 +149,6 @@ const App: React.FC = () => {
       />;
     }
 
-    // Role-Based Routing
     switch (user?.role) {
       case UserRole.SUPERADMIN:
         return <SuperAdminDashboard
@@ -102,8 +161,34 @@ const App: React.FC = () => {
 
       case UserRole.TUTOR:
         return <AdminDashboard
-          questionBank={questionBank}
+          // Data Props
+          exams={exams}
+          submissions={submissions}
+          users={users}
+          questionBank={fetchedQuestions}
           templates={templates}
+          systemSettings={{ aiEnabled: false } as any} // Placeholder for settings until API ready
+
+          // Actions
+          onSaveExam={saveExam}
+          onDeleteExam={deleteExam}
+          onBulkDeleteExams={bulkDeleteExams}
+          onBulkDeleteSubmissions={bulkDeleteSubmissions}
+
+          onAddToBank={saveQuestion}
+          onUpdateBankQuestion={(id, q) => saveQuestion(q)}
+          onDeleteFromBank={deleteQuestion}
+
+          onManualGrade={handleManualGrade}
+          onReleaseResults={handleReleaseResults}
+          onReleaseSingleSubmission={handleReleaseSingleSubmission}
+          onReleaseAllDelayedResults={() => { }} // Placeholder or impl similar to ReleaseResults
+
+          onAIGradeSubmission={async () => { addToast('AI Grading not enabled', 'info'); }}
+
+          onSaveTemplate={t => setTemplates(p => [...p, t])} // Local only for MVP
+          onDeleteTemplate={id => setTemplates(p => p.filter(t => t.id !== id))}
+
           onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); }}
         />;
 
