@@ -13,7 +13,7 @@ datasource db {
 
 enum UserRole {
   CANDIDATE
-  TUTOR
+  ADMIN
   SUPERADMIN
 }
 

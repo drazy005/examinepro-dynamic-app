@@ -18,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
     const role = user.role as string;
-    const isAdmin = role === 'ADMIN' || role === 'TUTOR' || role === 'SUPERADMIN';
+    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
 
     // GET: Fetch Exam Details
     if (req.method === 'GET') {

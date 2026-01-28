@@ -15,7 +15,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<UserRole>(UserRole.BASIC);
+  const [role, setRole] = useState<UserRole>(UserRole.CANDIDATE);
   const [error, setError] = useState('');
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -61,7 +61,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
 
     try {
-      await api.auth.register({ name: cleanName, email: cleanEmail, password, role });
+      await api.auth.register({ name: cleanName, email: cleanEmail, password });
       setAuthView('verify_sent');
     } catch (err: any) {
       setError(err.message || 'Registration failed.');
@@ -144,14 +144,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Password</label>
                   <input type="password" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Role</label>
-                  <select className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl outline-none text-slate-900 dark:text-white font-bold" value={role} onChange={e => setRole(e.target.value as UserRole)}>
-                    <option value={UserRole.BASIC}>Candidate</option>
-                    <option value={UserRole.ADMIN}>Administrator</option>
-                    <option value={UserRole.SUPERADMIN}>Super Admin</option>
-                  </select>
-                </div>
+                {/* Role selection removed - Defaults to CANDIDATE */}
               </div>
               <button type="submit" className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:brightness-110 mt-2" style={{ backgroundColor: branding.primaryColor }}>Create Account</button>
             </form>

@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Admin View: All exams with questions
             const role = user.role as string;
             // Use string checks to be safe against stale Prisma Client enums
-            if (role !== 'ADMIN' && role !== 'TUTOR' && role !== 'SUPERADMIN') {
+            if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
                 // Fallback for basic users querying without mode
                 return res.status(403).json({ error: 'Access denied' });
             }
@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // POST: Create Exam
     if (req.method === 'POST') {
         const role = user.role as string;
-        if (role !== 'ADMIN' && role !== 'TUTOR' && role !== 'SUPERADMIN') {
+        if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
             return res.status(403).json({ error: 'Forbidden' });
         }
 

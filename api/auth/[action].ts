@@ -96,15 +96,17 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
         });
     }
 
-    const { email, password, name } = req.body;
+    const { email, password, name, role: requestedRole } = req.body;
     if (!email || !password || !name) return res.status(400).json({ error: 'Missing fields' });
 
     const existingUser = await db.user.findUnique({ where: { email } });
     if (existingUser) return res.status(409).json({ error: 'Email already registered' });
 
     const passwordHash = await authLib.hashPassword(password);
-    const userCount = await db.user.count();
-    const role = userCount === 0 ? 'SUPERADMIN' : 'CANDIDATE';
+
+    // Strict Role Policy: All new registrations are CANDIDATE.
+    // Upgrades to ADMIN/SUPERADMIN must be done via Database.
+    const role = 'CANDIDATE';
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const newUser = await db.user.create({

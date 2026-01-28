@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = authLib.verifyToken(token);
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
-    const isAdmin = ['ADMIN', 'TUTOR', 'SUPERADMIN'].includes(user.role as string);
+    const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(user.role as string);
 
     // GET: Fetch Submission Details
     if (req.method === 'GET') {

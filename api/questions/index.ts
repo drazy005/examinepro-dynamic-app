@@ -10,9 +10,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     const user = authLib.verifyToken(token);
 
-    // Check for ADMIN, TUTOR, or SUPERADMIN
+    // Check for ADMIN or SUPERADMIN
     const role = user.role as string;
-    if (!user || (role !== 'ADMIN' && role !== 'TUTOR' && role !== 'SUPERADMIN')) {
+    if (!user || (role !== 'ADMIN' && role !== 'SUPERADMIN')) {
         return res.status(403).json({ error: 'Forbidden' });
     }
 
