@@ -47,6 +47,7 @@ Before deploying the code, you must sync your database schema with Supabase.
 > 1. `migration_step1_enums.sql` (Adds User Roles)
 > 2. `migration_step2_data.sql` (Updates User Data)
 > 3. `migration_step3_schema_update.sql` (Updates Exam/Submission Headers)
+> 4. `migration_step4_fix_roles.sql` (Cleans up invalid roles)
 >
 > Once these are run, your database will be ready for deployment even if `prisma db push` fails locally.
 

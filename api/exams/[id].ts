@@ -61,20 +61,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
             const { questions, ...data } = req.body;
 
-            // 1. Update Exam fields
-            const updatedExam = await db.exam.update({
-                where: { id },
-                data: { ...data }
-            });
+            // Update exam and replace questions in a transaction
+            const updatedExam = await db.$transaction(async (tx: any) => {
+                // 1. Update basic exam details
+                const exam = await tx.exam.update({
+                    where: { id },
+                    data: { ...data }
+                });
 
-            // 2. Handle Questions (upsert/delete logic is complex, simpler to expect full replacement or separate question API)
-            // For MVP refactor: We won't auto-update questions here to avoid accidental data loss. 
-            // Questions should be managed via /api/questions or if the client sends a full set?
-            // Let's stick to updating non-relational fields here for safety unless explicitly requested.
-            // If the user wants to update questions, they probably use the dedicated question management UI. 
+                // 2. If questions are provided, replace them
+                if (questions && Array.isArray(questions)) {
+                    // Delete existing questions
+                    await tx.question.deleteMany({
+                        where: { examId: id }
+                    });
+
+                    // Create new questions
+                    // Note: We use createMany if possible, but for relation safety (and if we need specific nested logic later),
+                    // individual creates inside the transaction are fine. ensure `createMany` is supported by your DB/Prisma version for relations or use map.
+                    // For nested relations, we can use update with `questions: { deleteMany: {}, create: [...] }` but strict control is better here.
+
+                    // Better approach: use the update's nested write (atomic)
+                    await tx.exam.update({
+                        where: { id },
+                        data: {
+                            questions: {
+                                deleteMany: {}, // Delete all existing
+                                create: questions.map((q: any) => ({
+                                    type: q.type,
+                                    text: q.text,
+                                    imageUrl: q.imageUrl,
+                                    options: q.options || [],
+                                    correctAnswer: q.correctAnswer,
+                                    points: q.points || 1,
+                                    category: q.category
+                                }))
+                            }
+                        }
+                    });
+                }
+
+                return exam;
+            });
 
             return res.status(200).json(updatedExam);
         } catch (e) {
+            console.error('Update Exam Error:', e);
             return res.status(500).json({ error: 'Failed to update exam' });
         }
     }
