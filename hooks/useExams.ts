@@ -22,10 +22,18 @@ export const useExams = () => {
 
   const saveExam = useCallback(async (exam: Exam) => {
     try {
-      const saved = await api.exams.save(exam);
-      setExams(prev => 
-        prev.some(x => x.id === exam.id) 
-          ? prev.map(x => x.id === exam.id ? saved : x) 
+      const isUpdate = exams.some(x => x.id === exam.id);
+      let saved: Exam;
+
+      if (isUpdate) {
+        saved = await api.exams.update(exam);
+      } else {
+        saved = await api.exams.create(exam);
+      }
+
+      setExams(prev =>
+        prev.some(x => x.id === saved.id)
+          ? prev.map(x => x.id === saved.id ? saved : x)
           : [saved, ...prev]
       );
       addToast('Exam saved successfully!', 'success');
@@ -34,7 +42,7 @@ export const useExams = () => {
       addToast('Failed to save exam.', 'error');
       throw err;
     }
-  }, [addToast]);
+  }, [exams, addToast]);
 
   const deleteExam = useCallback(async (id: string) => {
     const originalExams = [...exams];
@@ -47,7 +55,7 @@ export const useExams = () => {
       setExams(originalExams); // Revert on error
     }
   }, [exams, addToast]);
-  
+
   const bulkDeleteExams = useCallback(async (ids: string[]) => {
     const originalExams = [...exams];
     setExams(prev => prev.filter(x => !ids.includes(x.id))); // Optimistic update

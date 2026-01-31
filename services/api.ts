@@ -87,7 +87,17 @@ export const api = {
 
   exams: {
     list: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams')),
-    listAvailable: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams?mode=available')), 
+    listAvailable: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams?mode=available')),
+
+    create: async (exam: Exam): Promise<Exam> => withLoading(request<Exam>('/exams', {
+      method: 'POST',
+      body: JSON.stringify(exam)
+    })),
+    update: async (exam: Exam): Promise<Exam> => withLoading(request<Exam>(`/exams/${exam.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(exam)
+    })),
+    // Deprecated save in favor of explicit create/update, keeping for backward compat if needed but usually removed
     save: async (exam: Exam): Promise<Exam> => withLoading(request<Exam>('/exams', {
       method: 'POST',
       body: JSON.stringify(exam)

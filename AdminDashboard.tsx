@@ -405,7 +405,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <td className="px-10 py-8 text-xs text-slate-500">{u.email}</td>
                     <td className="px-10 py-8">
                       <span className={`px-4 py-1.5 rounded-xl text-[8px] font-black uppercase ${u.role === UserRole.SUPERADMIN ? 'bg-indigo-600 text-white' :
-                          u.role === UserRole.TUTOR ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'
+                        u.role === UserRole.ADMIN ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'
                         }`}>
                         {u.role}
                       </span>
