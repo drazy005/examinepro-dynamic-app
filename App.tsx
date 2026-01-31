@@ -63,7 +63,7 @@ const App: React.FC = () => {
   }, [handleLogout]);
 
   useEffect(() => {
-    if (user?.role === UserRole.TUTOR || user?.role === UserRole.SUPERADMIN) {
+    if (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) {
       refreshQuestions();
     }
   }, [user, refreshQuestions]);
@@ -159,7 +159,7 @@ const App: React.FC = () => {
           onDeleteDbConfig={id => setDbConfigs(p => p.filter(x => x.id !== id))}
         />;
 
-      case UserRole.TUTOR:
+      case UserRole.ADMIN:
         return <AdminDashboard
           // Data Props
           exams={exams}

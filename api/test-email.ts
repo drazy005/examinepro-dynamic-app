@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { emailLib } from '../_lib/email.js';
+import { emailLib } from './_lib/email.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Only allow in development or via a secret key if needed, keeping simple for now
