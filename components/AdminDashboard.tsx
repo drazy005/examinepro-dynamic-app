@@ -291,7 +291,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 <button onClick={() => setIsImporting(true)} className="bg-slate-800 text-white px-4 py-3 rounded-xl font-bold uppercase text-[10px]">Import (CSV)</button>
                 <button onClick={() => {
                   const newQ: Question = {
-                    id: uuidv4(),
+                    id: '', // Empty ID triggers CREATE
                     type: QuestionType.MCQ,
                     text: 'New Multi-Choice Question',
                     correctAnswer: 'Option A',
@@ -303,7 +303,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 }} className="bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold uppercase text-[10px]">+ MCQ</button>
                 <button onClick={() => {
                   const newQ: Question = {
-                    id: uuidv4(),
+                    id: '',
                     type: QuestionType.SBA,
                     text: 'New Single Best Answer',
                     correctAnswer: 'Option A',
@@ -315,7 +315,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 }} className="bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold uppercase text-[10px]">+ SBA</button>
                 <button onClick={() => {
                   const newQ: Question = {
-                    id: uuidv4(),
+                    id: '',
                     type: QuestionType.THEORY,
                     text: 'New Theory Question',
                     correctAnswer: 'Model Answer Keywords...',
@@ -434,10 +434,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                       // Best way: Use a string state for this input, but since we bind to editingExam.scheduledReleaseDate (Date object or string), we convert.
                       value={editingExam.scheduledReleaseDate ?
                         (typeof editingExam.scheduledReleaseDate === 'string'
-                          ? new Date(editingExam.scheduledReleaseDate).toISOString().slice(0, 16)
-                          : new Date(new Date(editingExam.scheduledReleaseDate).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16))
+                          ? editingExam.scheduledReleaseDate.substring(0, 16)
+                          : new Date(editingExam.scheduledReleaseDate).toISOString().slice(0, 16))
                         : ''}
-                      onChange={e => setEditingExam({ ...editingExam, scheduledReleaseDate: e.target.value ? new Date(e.target.value) : undefined })}
+                      onChange={e => setEditingExam({ ...editingExam, scheduledReleaseDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Leave blank to publish immediately.</p>
                   </div>
@@ -497,14 +497,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                     </div>
                     <div className="mt-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="flex justify-between items-center">
-                        <span className="text-indigo-600 text-xs font-bold uppercase">Preview / Edit</span>
+                        <span className="text-indigo-600 text-xs font-bold uppercase">Actions</span>
                         <div className="flex gap-2">
-                          {/* Quick Duration Edit for Active Exams */}
                           <button onClick={(e) => {
+                            e.stopPropagation(); setEditingExam({ ...exam, questions: exam.questions || [] }); setIsCreating(true);
+                          }} className="text-indigo-600 text-xs font-bold uppercase hover:underline z-10">Edit</button>
+
+                          <button onClick={(e) => {
+                            e.stopPropagation(); onPreviewExam(exam);
+                          }} className="text-blue-600 text-xs font-bold uppercase hover:underline z-10">Preview</button>
+
+                          {/* Quick Duration Edit for Active Exams */}
+                          <button onClick={async (e) => {
                             e.stopPropagation();
                             const newTime = prompt("Enter new duration (minutes):", exam.durationMinutes.toString());
                             if (newTime && !isNaN(parseInt(newTime))) {
-                              saveExam({ ...exam, durationMinutes: parseInt(newTime) });
+                              try {
+                                await fetch(`/api/exams/${exam.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ durationMinutes: parseInt(newTime) })
+                                });
+                                alert('Time added! Students will see update in < 30s.');
+                              } catch (e) { alert('Failed to add time'); }
                             }
                           }} className="text-emerald-600 text-xs font-bold uppercase hover:underline">Add Time</button>
 

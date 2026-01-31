@@ -33,9 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             type: true,
                             options: true,
                             points: true,
-                            // precise behavior: don't reveal correctAnswer to candidates here unless verified flow
-                            // For now, only Admins get correct answers via this specific endpoint? 
-                            // Or standard behavior: do NOT send correctAnswer to client.
+                            correctAnswer: isAdmin, // Only expose if admin
                         }
                     }
                 }

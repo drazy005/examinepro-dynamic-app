@@ -60,6 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             type: true,
                             options: true,
                             points: true,
+                            correctAnswer: true, // Critical: Admins need this to edit/save exams correctly
                         }
                     }
                 },

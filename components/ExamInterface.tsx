@@ -159,96 +159,144 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
     </div>
   );
 
+  const QuestionPalette = () => (
+    <div className="bg-white dark:bg-slate-900 p-6 theme-rounded shadow-xl border border-slate-200 dark:border-slate-800 h-fit sticky top-24">
+      <h3 className="font-black uppercase text-xs tracking-widest text-slate-400 mb-4">Question Map</h3>
+      <div className="grid grid-cols-5 gap-2">
+        {exam.questions.map((_, idx) => {
+          const isAnswered = answers[randomizedExamData.questions[idx].id];
+          const isCurrent = idx === currentIndex;
+          return (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${isCurrent
+                ? 'bg-indigo-600 text-white shadow-lg scale-110 ring-2 ring-indigo-300'
+                : isAnswered
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-slate-200'
+                }`}
+            >
+              {idx + 1}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-6 space-y-2 text-[10px] font-bold uppercase text-slate-400">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-indigo-600"></div> Current
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-emerald-100 dark:bg-emerald-900/30"></div> Answered
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-slate-100 dark:bg-slate-800"></div> Unseen
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className={`w-full min-h-screen flex flex-col justify-center transition-all duration-700 bg-slate-50 dark:bg-slate-950`}>
+    <div className={`w-full min-h-screen flex flex-col transition-all duration-700 bg-slate-50 dark:bg-slate-950`}>
       {!isAdminPreview && proctorState?.hasCamera && (
-        <div className={`fixed top-8 left-8 z-[100] w-48 h-36 bg-black theme-rounded border-4 overflow-hidden shadow-2xl transition-all ${isStressState ? 'border-red-500 scale-110' : 'border-indigo-600'}`}>
+        <div className={`fixed bottom-8 left-8 z-[100] w-32 h-24 bg-black theme-rounded border-4 overflow-hidden shadow-2xl transition-all ${isStressState ? 'border-red-500 scale-110' : 'border-indigo-600'}`}>
           <video ref={videoRef} autoPlay muted className="w-full h-full object-cover grayscale opacity-50" />
-          <div className="absolute top-2 left-2 flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full animate-pulse bg-red-600`}></span>
-            <span className="text-[8px] font-black uppercase text-white tracking-widest">Active Proctoring</span>
+          <div className="absolute top-1 left-1 flex items-center gap-1">
+            <span className={`w-1.5 h-1.5 rounded-full animate-pulse bg-red-600`}></span>
           </div>
         </div>
       )}
 
-      <div className="mx-auto max-w-5xl w-full flex flex-col justify-center p-4">
-        <div className="flex justify-between items-center mb-6 px-6">
+      {/* Header Bar */}
+      <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${isStressState ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {isStressState ? 'HURRY - TIME IS LOW' : 'Secure Connection Established'}
-            </span>
+            {isAdminPreview && (
+              <button
+                onClick={onCancel}
+                className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold uppercase text-xs transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                Exit Preview
+              </button>
+            )}
+            <h1 className="font-black uppercase tracking-tight text-lg truncate max-w-md">{exam.title}</h1>
           </div>
-          {proctorAlerts > 0 && (
-            <div className="bg-red-600 text-white px-4 py-1.5 theme-rounded text-[10px] font-black uppercase tracking-widest shadow-xl animate-bounce">
-              Focus Alerts: {proctorAlerts}
-            </div>
-          )}
+          <div className={`px-6 py-2 theme-rounded font-mono font-black text-xl transition-colors ${isStressState ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-800'}`}>
+            {formatTime(timeLeft)}
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto w-full p-6 flex gap-8 items-start">
+        {/* Desktop Palette */}
+        <div className="hidden lg:block w-64 shrink-0">
+          <QuestionPalette />
         </div>
 
-        <div className={`bg-white dark:bg-slate-900 theme-rounded shadow-3xl overflow-hidden border-8 transition-all duration-700 ${isStressState ? 'border-red-500' : 'border-indigo-600'}`}>
-          <div className={`px-12 py-6 flex justify-between items-center border-b transition-colors ${isStressState ? 'bg-red-600 text-white border-red-500' : 'bg-indigo-700 text-white border-white/10'}`}>
-            <div>
-              <h2 className="font-black tracking-tighter uppercase leading-none mb-2 text-3xl">{exam.title}</h2>
-              <span className="bg-white/20 px-3 py-1 theme-rounded text-[9px] font-black uppercase">Question {currentIndex + 1} of {exam.questions.length}</span>
-            </div>
-            <div className={`px-10 py-6 theme-rounded backdrop-blur-xl border shadow-2xl font-mono font-black ${isStressState ? 'bg-black/50 text-white' : 'bg-black/30 text-white'} text-4xl`}>
-              {formatTime(timeLeft)}
-            </div>
+        <div className="flex-grow flex flex-col">
+          {/* Mobile Palette Toggle / Status Bar */}
+          <div className="lg:hidden mb-4 flex justify-between items-center">
+            <span className="text-xs font-black uppercase text-slate-400">Q {currentIndex + 1} of {exam.questions.length}</span>
+            {/* Simple mobile palette could be a horizontal scroll or dropdown, for now just simple status */}
           </div>
 
-          {/* Top Navigation */}
-          <div className="px-12 py-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
-            <NavigationControls />
-          </div>
+          <div className={`bg-white dark:bg-slate-900 theme-rounded shadow-2xl overflow-hidden border-4 transition-all duration-700 ${isStressState ? 'border-red-500' : 'border-transparent'}`}>
 
-          <div className="p-16 space-y-10 min-h-[450px]">
-            <h3 className="font-black uppercase tracking-tight leading-tight text-3xl text-slate-800 dark:text-white">
-              {currentQuestion.text}
-            </h3>
+            {/* Top Navigation */}
+            <div className="px-8 py-4 bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Question {currentIndex + 1}</span>
+              <NavigationControls />
+            </div>
 
-            {currentQuestion.imageUrl && (
-              <div className="flex justify-center my-8">
-                <img src={currentQuestion.imageUrl} className="max-w-full theme-rounded shadow-xl border-4 border-slate-100" alt="Question Resource" />
-              </div>
-            )}
+            <div className="p-8 md:p-12 space-y-8 min-h-[400px]">
+              <h3 className="font-black uppercase tracking-tight leading-snug text-2xl md:text-3xl text-slate-800 dark:text-white">
+                {currentQuestion.text}
+              </h3>
 
-            <div className="space-y-4">
-              {currentQuestion.type === QuestionType.THEORY ? (
-                <textarea
-                  className="w-full h-64 p-10 theme-rounded outline-none font-bold border-4 border-slate-100 dark:bg-slate-950 dark:border-slate-800 focus:border-indigo-500 transition-all text-xl"
-                  placeholder="Enter your detailed answer here..."
-                  value={answers[currentQuestion.id] || ''}
-                  onChange={e => setAnswers({ ...answers, [currentQuestion.id]: e.target.value })}
-                />
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {currentQuestion.options?.map((opt, idx) => {
-                    const letter = String.fromCharCode(65 + idx);
-                    const isSelected = answers[currentQuestion.id] === opt;
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => setAnswers({ ...answers, [currentQuestion.id]: opt })}
-                        className={`w-full flex items-center gap-6 p-6 theme-rounded border-4 transition-all text-left ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950'
-                          }`}
-                      >
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl ${isSelected ? 'bg-white text-indigo-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                          {letter}
-                        </div>
-                        <span className="font-black uppercase tracking-tight text-lg">{opt}</span>
-                      </button>
-                    );
-                  })
-                  }
+              {currentQuestion.imageUrl && (
+                <div className="flex justify-center my-6">
+                  <img src={currentQuestion.imageUrl} className="max-w-full max-h-96 theme-rounded shadow-lg border-4 border-slate-100" alt="Question Resource" />
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Bottom Navigation */}
-          <div className="px-12 py-12 border-t bg-white dark:bg-slate-900">
-            <NavigationControls />
+              <div className="space-y-3">
+                {currentQuestion.type === QuestionType.THEORY ? (
+                  <textarea
+                    className="w-full h-64 p-6 theme-rounded outline-none font-bold border-2 border-slate-200 dark:bg-slate-950 dark:border-slate-800 focus:border-indigo-500 transition-all text-lg"
+                    placeholder="Type your answer..."
+                    value={answers[currentQuestion.id] || ''}
+                    onChange={e => setAnswers({ ...answers, [currentQuestion.id]: e.target.value })}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {currentQuestion.options?.map((opt, idx) => {
+                      const letter = String.fromCharCode(65 + idx);
+                      const isSelected = answers[currentQuestion.id] === opt;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setAnswers({ ...answers, [currentQuestion.id]: opt })}
+                          className={`w-full flex items-center gap-4 p-4 theme-rounded border-2 transition-all text-left ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-indigo-200'
+                            }`}
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${isSelected ? 'bg-white text-indigo-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                            {letter}
+                          </div>
+                          <span className="font-bold text-base">{opt}</span>
+                        </button>
+                      );
+                    })
+                    }
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Navigation */}
+            <div className="px-8 py-6 border-t bg-slate-50 dark:bg-slate-950/50">
+              <NavigationControls />
+            </div>
           </div>
         </div>
       </div>
