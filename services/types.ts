@@ -146,9 +146,10 @@ export interface Exam {
   version: number;
   timerSettings: TimerSettings;
   gradingPolicy: GradingPolicy;
-  scheduledReleaseAt?: number;
-  fixedStartTime?: number;
-  fixedEndTime?: number;
+  scheduledReleaseDate?: string | Date;
+  warningTimeThreshold?: number;
+  showMcqScoreImmediately?: boolean;
+  resultReleaseMode?: 'MANUAL' | 'SCHEDULED' | 'INSTANT';
 }
 
 export interface ExamTemplate {

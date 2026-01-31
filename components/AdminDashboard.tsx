@@ -413,6 +413,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                   <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.title} onChange={e => setEditingExam({ ...editingExam, title: e.target.value })} placeholder="e.g. Final Anatomy Assessment" />
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Duration (Minutes)</label>
+                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.durationMinutes} onChange={e => setEditingExam({ ...editingExam, durationMinutes: parseInt(e.target.value) || 0 })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Pass Mark (%)</label>
+                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.passMark} onChange={e => setEditingExam({ ...editingExam, passMark: parseInt(e.target.value) || 0 })} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Scheduled Release (Optional)</label>
+                    <input
+                      type="datetime-local"
+                      className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm"
+                      value={editingExam.scheduledReleaseDate ? new Date(new Date(editingExam.scheduledReleaseDate).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                      onChange={e => setEditingExam({ ...editingExam, scheduledReleaseDate: e.target.value ? new Date(e.target.value) : undefined })}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Leave blank to publish immediately.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Warning Threshold (Min)</label>
+                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.timerSettings?.warningThresholdMinutes || 5} onChange={e => setEditingExam({ ...editingExam, timerSettings: { ...editingExam.timerSettings!, warningThresholdMinutes: parseInt(e.target.value) || 5 } })} />
+                  </div>
+                </div>
+
                 <div className="flex gap-4">
                   <button onClick={() => setEditingExam({ ...editingExam, questions: [...(editingExam.questions || []), ...questionBank.slice(0, 5)] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Add Random (5)</button>
                   <button onClick={() => setEditingExam({ ...editingExam, questions: [...(editingExam.questions || []), ...questionBank] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Add All from Bank</button>

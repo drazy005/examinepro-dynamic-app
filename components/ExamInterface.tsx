@@ -43,9 +43,9 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
 
   const calculateInitialTime = () => {
     const now = Date.now();
+    // Simple duration based timer
     const expiry = now + (exam.durationMinutes * 60 + (exam.timerSettings.gracePeriodSeconds || 0)) * 1000;
-    const finalExpiry = exam.fixedEndTime ? Math.min(expiry, exam.fixedEndTime) : expiry;
-    return Math.max(0, Math.floor((finalExpiry - now) / 1000));
+    return Math.max(0, Math.floor((expiry - now) / 1000));
   };
 
   const [timeLeft, setTimeLeft] = useState(calculateInitialTime());

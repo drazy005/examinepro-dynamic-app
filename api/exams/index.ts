@@ -23,8 +23,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const availableExams = await db.exam.findMany({
                     where: {
                         published: true,
-                        // TODO: Add startDate/endDate logic if schema supports it
-                        // Schema update required for scheduling
+                        OR: [
+                            { scheduledReleaseDate: null },
+                            { scheduledReleaseDate: { lte: now } }
+                        ]
                     },
                     select: {
                         id: true,
