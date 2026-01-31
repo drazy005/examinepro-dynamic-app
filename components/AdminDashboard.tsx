@@ -430,7 +430,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                     <input
                       type="datetime-local"
                       className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm"
-                      value={editingExam.scheduledReleaseDate ? new Date(new Date(editingExam.scheduledReleaseDate).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                      // Simple approach: Use string value from/to local ISO without complex conversion if possible, or strip 'Z'
+                      // Best way: Use a string state for this input, but since we bind to editingExam.scheduledReleaseDate (Date object or string), we convert.
+                      value={editingExam.scheduledReleaseDate ?
+                        (typeof editingExam.scheduledReleaseDate === 'string'
+                          ? new Date(editingExam.scheduledReleaseDate).toISOString().slice(0, 16)
+                          : new Date(new Date(editingExam.scheduledReleaseDate).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16))
+                        : ''}
                       onChange={e => setEditingExam({ ...editingExam, scheduledReleaseDate: e.target.value ? new Date(e.target.value) : undefined })}
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Leave blank to publish immediately.</p>
@@ -458,8 +464,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-4 pt-4 border-t">
-                  <button onClick={() => setIsCreating(false)} className="px-6 py-3 font-bold uppercase text-xs text-slate-500">Cancel</button>
+                <div className="flex justify-between gap-4 pt-4 border-t">
+                  <div className="flex gap-2">
+                    <button onClick={() => setIsCreating(false)} className="px-6 py-3 font-bold uppercase text-xs text-slate-500">Cancel</button>
+                    {/* Duplicate / Save as Copy Feature */}
+                    {editingExam.id && (
+                      <button onClick={async () => {
+                        const copy = { ...editingExam, id: undefined, title: `${editingExam.title} (Copy)`, published: false };
+                        setEditingExam(copy);
+                        // We just updated state, user can now Save as new.
+                        addToast('Exam duplicated. Click Save to create.', 'success');
+                      }} className="px-6 py-3 font-bold uppercase text-xs text-indigo-600">Save as Copy</button>
+                    )}
+                  </div>
                   <button onClick={handleSave} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs shadow-lg">Save Exam</button>
                 </div>
               </div>
@@ -478,9 +495,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                       <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.questions.length} Qs</span>
                       <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.durationMinutes} m</span>
                     </div>
-                    <div className="mt-4 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-indigo-600 text-xs font-bold uppercase">Preview</span>
-                      <button onClick={(e) => { e.stopPropagation(); bulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase">Delete</button>
+                    <div className="mt-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-between items-center">
+                        <span className="text-indigo-600 text-xs font-bold uppercase">Preview / Edit</span>
+                        <div className="flex gap-2">
+                          {/* Quick Duration Edit for Active Exams */}
+                          <button onClick={(e) => {
+                            e.stopPropagation();
+                            const newTime = prompt("Enter new duration (minutes):", exam.durationMinutes.toString());
+                            if (newTime && !isNaN(parseInt(newTime))) {
+                              saveExam({ ...exam, durationMinutes: parseInt(newTime) });
+                            }
+                          }} className="text-emerald-600 text-xs font-bold uppercase hover:underline">Add Time</button>
+
+                          <button onClick={(e) => { e.stopPropagation(); bulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
