@@ -13,14 +13,11 @@ import { useToast } from '../services/ToastContext';
 import ImageUpload from './ImageUpload';
 
 interface SuperAdminDashboardProps {
-  dbConfigs: DatabaseConfig[];
   announcements: BlogPost[];
   onUpdateAnnouncements: (posts: BlogPost[]) => void;
-  onSaveDbConfig: (config: DatabaseConfig) => void;
-  onDeleteDbConfig: (id: string) => void;
 }
 
-const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announcements, onUpdateAnnouncements, onDeleteDbConfig }) => {
+const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announcements, onUpdateAnnouncements }) => {
   const { settings, setSettings, branding, setBranding } = useSystem();
   const { users } = useUsers();
   const { addToast } = useToast();
@@ -38,22 +35,45 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
         const data = await api.admin.getLogs();
         setLogs(data);
       } catch (e) {
-        addToast('Failed to fetch audit logs.', 'error');
+        // Silent fail or toast
       }
     };
     if (activeView === 'audit') fetchLogs();
-  }, [activeView, addToast]);
+  }, [activeView]);
 
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>(() => SecureStorage.load(STORAGE_KEYS.API_KEYS, []));
+  // Use Settings from Context (Server Synced) directly
+  const apiKeys = settings.apiKeys || [];
+  const dbConfigs = settings.dbConfigs || [];
+
+  const updateSettings = async (updates: Partial<typeof settings>) => {
+    const newSettings = { ...settings, ...updates };
+    setSettings(newSettings); // Optimistic
+    try {
+      await api.admin.updateSettings(updates);
+    } catch (e) {
+      addToast('Failed to save settings', 'error');
+      // Revert? For now, we assume success or user refresh fixes it.
+    }
+  };
+
+  const handleSaveDbConfig = async (config: DatabaseConfig) => {
+    const newConfigs = dbConfigs.some(c => c.id === config.id)
+      ? dbConfigs.map(c => c.id === config.id ? config : c)
+      : [config, ...dbConfigs];
+    await updateSettings({ dbConfigs: newConfigs });
+    addToast('Database Config Saved', 'success');
+  };
+
+  const handleDeleteDbConfig = async (id: string) => {
+    const newConfigs = dbConfigs.filter(c => c.id !== id);
+    await updateSettings({ dbConfigs: newConfigs });
+    addToast('Database Config Deleted', 'info');
+  };
 
   useEffect(() => {
     const interval = setInterval(() => setSystemLoad(prev => Math.max(10, Math.min(95, prev + (Math.random() * 10 - 5)))), 3000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    SecureStorage.save(STORAGE_KEYS.API_KEYS, apiKeys);
-  }, [apiKeys]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(l => {
@@ -67,8 +87,28 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
 
   const handleBackup = async () => {
     try {
-      // Mock backup for now
-      addToast('System backup initiated.', 'success');
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        settings,
+        branding,
+        users: await api.admin.getUsers(), // Fetch fresh user list
+        logs: await api.admin.getLogs(),
+        announcements
+      };
+
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `system-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      addToast('System backup downloaded.', 'success');
+      // Log event
+      logEvent('SUPERADMIN', 'System Backup', 'User initiated full system backup download');
     } catch (e) {
       addToast("Backup failed to generate.", 'error');
     }
@@ -117,7 +157,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
 
       {/* Navigation */}
       <nav className="flex overflow-x-auto gap-2 pb-2">
-        {['system', 'appearance', 'users', 'audit', 'announcements'].map((view) => (
+        {['system', 'appearance', 'users', 'audit', 'announcements', 'database', 'api-keys'].map((view) => (
           <button
             key={view}
             onClick={() => setActiveView(view as any)}
@@ -126,7 +166,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
               : 'bg-white dark:bg-slate-900 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
           >
-            {view}
+            {view.replace('-', ' ')}
           </button>
         ))}
       </nav>
@@ -141,7 +181,16 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
               <div className="space-y-6">
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-xl">
                   <span className="font-bold">AI Grading</span>
-                  <button onClick={() => setSettings({ ...settings, aiGradingEnabled: !settings.aiGradingEnabled })}
+                  <button onClick={async () => {
+                    const newSettings = { ...settings, aiGradingEnabled: !settings.aiGradingEnabled };
+                    setSettings(newSettings); // Local update
+                    try {
+                      await api.admin.updateSettings(newSettings); // Server sync
+                      addToast('Settings saved', 'success');
+                    } catch {
+                      addToast('Failed to save settings', 'error');
+                    }
+                  }}
                     className={`px-4 py-2 rounded font-bold text-xs uppercase ${settings.aiGradingEnabled ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
                     {settings.aiGradingEnabled ? 'Enabled' : 'Disabled'}
                   </button>
@@ -285,6 +334,80 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                 </div>
               ))}
               {filteredLogs.length === 0 && <p>No logs found.</p>}
+            </div>
+          </div>
+        )}
+
+        {activeView === 'database' && (
+          <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+            <div className="flex justify-between mb-6">
+              <h2 className="font-black text-2xl uppercase">Database connections</h2>
+              <button onClick={() => handleSaveDbConfig({ id: uuidv4(), name: 'New DB', type: 'postgres', host: 'localhost', port: 5432, username: 'postgres', database: 'postgres' })} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold uppercase text-xs">+ New Connection</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {dbConfigs.map(config => (
+                <div key={config.id} className="p-6 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="font-bold text-lg">{config.name}</h3>
+                    <button onClick={() => handleDeleteDbConfig(config.id)} className="text-red-500 text-xs font-black uppercase hover:underline">Remove</button>
+                  </div>
+                  <div className="space-y-2 text-xs font-mono text-slate-500">
+                    <div className="flex justify-between"><span>Type:</span> <span className="text-slate-900 dark:text-white uppercase">{config.type}</span></div>
+                    <div className="flex justify-between"><span>Host:</span> <span className="text-slate-900 dark:text-white">{config.host}:{config.port}</span></div>
+                    <div className="flex justify-between"><span>User:</span> <span className="text-slate-900 dark:text-white">{config.username}</span></div>
+                    <div className="flex justify-between"><span>DB:</span> <span className="text-slate-900 dark:text-white">{config.database}</span></div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 flex gap-2">
+                    <button className="flex-1 py-2 bg-slate-200 dark:bg-slate-800 rounded font-bold text-xs uppercase text-slate-500 hover:text-slate-900">Test Connection</button>
+                  </div>
+                </div>
+              ))}
+              {dbConfigs.length === 0 && <p className="col-span-2 text-center text-slate-400 py-10">No external databases configured.</p>}
+            </div>
+          </div>
+        )}
+
+        {activeView === 'api-keys' && (
+          <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+            <div className="flex justify-between mb-6">
+              <h2 className="font-black text-2xl uppercase">API Access Keys</h2>
+              <button onClick={async () => {
+                const newKey: ApiKey = {
+                  id: uuidv4(),
+                  key: generateApiKey(),
+                  name: `Key ${apiKeys.length + 1}`,
+                  scopes: [ApiScope.READ_ONLY],
+                  createdAt: Date.now(),
+                  // lastUsedAt: undefined // Optional parameter
+                };
+                await updateSettings({ apiKeys: [newKey, ...apiKeys] });
+                addToast('New API Key Generated', 'success');
+              }} className="bg-indigo-600 text-white px-4 py-2 rounded font-bold uppercase text-xs">+ Generate Key</button>
+            </div>
+            <div className="space-y-4">
+              {apiKeys.map(key => (
+                <div key={key.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <div className="font-bold">{key.name}</div>
+                    <code className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded mt-1 block w-fit">{key.key}</code>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase font-bold text-slate-400">Scopes</div>
+                      <div className="text-xs font-bold">{key.scopes.join(', ')}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase font-bold text-slate-400">Created</div>
+                      <div className="text-xs font-bold">{new Date(key.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    <button onClick={async () => {
+                      await updateSettings({ apiKeys: apiKeys.filter(k => k.id !== key.id) });
+                      addToast('API Key Revoked', 'info');
+                    }} className="text-red-500 text-xs font-black uppercase hover:underline">Revoke</button>
+                  </div>
+                </div>
+              ))}
+              {apiKeys.length === 0 && <p className="text-center text-slate-400 py-10">No active API keys.</p>}
             </div>
           </div>
         )}

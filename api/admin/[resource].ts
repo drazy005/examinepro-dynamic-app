@@ -56,11 +56,12 @@ async function handleLogs(req: VercelRequest, res: VercelResponse, user: any) {
             orderBy: { timestamp: 'desc' },
             include: { user: { select: { name: true, email: true } } }
         });
-        return res.status(200).json(logs.map(l => ({
+        const validLogs = logs.map(l => ({
             ...l,
             timestamp: l.timestamp.getTime(),
-            userName: l.user.name
-        })));
+            userName: l.user?.name || 'Unknown User'
+        }));
+        return res.status(200).json(validLogs);
     }
     return res.status(405).json({ error: 'Method not allowed' });
 }
@@ -75,7 +76,7 @@ async function handleAnnouncements(req: VercelRequest, res: VercelResponse, user
         return res.status(200).json(posts.map(p => ({
             ...p,
             createdAt: p.createdAt.getTime(),
-            authorName: p.author.name
+            authorName: p.author?.name || 'System'
         })));
     }
 
@@ -87,17 +88,21 @@ async function handleAnnouncements(req: VercelRequest, res: VercelResponse, user
 
         const results = [];
         for (const p of posts) {
+            // Ensure authorId is valid (use the current admin's ID)
             const data = {
-                title: p.title, content: p.content, published: p.published, authorId: user.userId
+                title: p.title,
+                content: p.content,
+                published: p.published !== undefined ? p.published : true,
+                authorId: user.id // Use session user ID, NOT payload AuthorId
             };
 
-            if (p.id && p.id.length > 10) {
-                const updated = await db.blogPost.update({ where: { id: p.id }, data });
-                results.push(updated);
-            } else {
-                const created = await db.blogPost.create({ data });
-                results.push(created);
-            }
+            // Use Upsert to handle both New (Client-generated UUID) and Existing
+            const saved = await db.blogPost.upsert({
+                where: { id: p.id },
+                update: data,
+                create: { ...data, id: p.id }
+            });
+            results.push(saved);
         }
         return res.status(200).json(results);
     }

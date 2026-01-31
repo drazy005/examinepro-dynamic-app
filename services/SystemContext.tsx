@@ -11,6 +11,7 @@ interface SystemContextType {
   setBranding: (b: AppBranding) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  refreshSettings: () => Promise<void>;
 }
 
 const SystemContext = createContext<SystemContextType | undefined>(undefined);
@@ -50,6 +51,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
   useEffect(() => {
+    // Sync Theme
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
@@ -59,14 +61,40 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [isDarkMode]);
 
+  // Fetch Settings from Server on Mount/Updates
+  const refreshSettings = async () => {
+    try {
+      // Ideally this should use the 'api' service but circular deps might be verified
+      // forcing a direct fetch or using the api module if it doesn't depend on context
+      // Inspecting api.ts -> imports types.ts. Context imports api.ts? 
+      // Check imports. api.ts is usually safe.
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const remoteSettings = await res.json();
+        setSettingsState(prev => ({ ...prev, ...remoteSettings }));
+      }
+    } catch (e) {
+      console.error("Failed to load settings", e);
+    }
+  };
+
+  useEffect(() => {
+    refreshSettings();
+  }, []); // Run once on mount. 
+  // Ideally also when user logs in? 
+  // App.tsx handles auth updates, maybe it should trigger a refresh? 
+  // For now, let's expose refreshSettings.
+
   return (
-    <SystemContext.Provider value={{ settings, branding, setSettings, setBranding, isDarkMode, toggleDarkMode }}>
+    <SystemContext.Provider value={{ settings, branding, setSettings, setBranding, isDarkMode, toggleDarkMode, refreshSettings }}>
       {children}
     </SystemContext.Provider>
   );
 };
 
 export const useSystem = () => {
+  // ... existing ...
+
   const context = useContext(SystemContext);
   if (!context) throw new Error("useSystem must be used within SystemProvider");
   return context;

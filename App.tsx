@@ -17,7 +17,7 @@ import { useSubmissions } from './hooks/useSubmissions';
 import { useUsers } from './hooks/useUsers';
 
 const App: React.FC = () => {
-  const { branding, isDarkMode, toggleDarkMode } = useSystem();
+  const { branding, isDarkMode, toggleDarkMode, refreshSettings } = useSystem();
   const { addToast } = useToast();
 
   const [user, setUser] = useState<User | null>(null);
@@ -51,6 +51,7 @@ const App: React.FC = () => {
           setUser(currentUser);
           const announcementsData = await api.admin.getAnnouncements();
           setAnnouncements(announcementsData);
+          refreshSettings(); // Sync settings (including superadmin keys if applicable)
         }
       } catch (e) {
         setUser(null);
@@ -108,7 +109,7 @@ const App: React.FC = () => {
     // Let's assume grading update logic is complex and done mostly client side in 'onManualGrade' before calling this?
     // AdminDashboard's onManualGrade usually just updates the state. We need to save it.
 
-    let newScore = Object.values(updatedResults).reduce((acc, r) => acc + (r.score || 0), 0);
+    let newScore = Object.values(updatedResults).reduce((acc, r: any) => acc + (r.score || 0), 0);
 
     const newSub: Submission = {
       ...sub,

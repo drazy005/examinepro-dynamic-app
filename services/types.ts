@@ -39,18 +39,46 @@ export enum ApiScope {
   READ_EXAMS = 'READ_EXAMS',
   WRITE_SUBMISSIONS = 'WRITE_SUBMISSIONS',
   READ_RESULTS = 'READ_RESULTS',
-  ADMIN_FULL = 'ADMIN_FULL'
+  ADMIN_FULL = 'ADMIN_FULL',
+  READ_ONLY = 'READ_ONLY'
 }
 
 export interface ApiKey {
   id: string;
   key: string;
-  label: string;
+  name: string; // Renamed from label
   scopes: ApiScope[];
   createdAt: number;
   lastUsedAt?: number;
-  status: 'ACTIVE' | 'REVOKED';
+  status?: 'ACTIVE' | 'REVOKED';
 }
+
+
+
+export interface SystemSettings {
+  aiGlobalEnabled: boolean;
+  aiQuestionGenEnabled: boolean;
+  aiGradingEnabled: boolean;
+  themePrimaryColor: string;
+  themeSecondaryColor?: string;
+  themeFontFamily: string;
+  themeMode: 'light' | 'dark' | 'system';
+  themeLogoUrl?: string; // Legacy
+  themeFaviconUrl?: string; // Legacy
+  themeBackgroundUrl?: string; // Legacy
+  themeBackgroundStyle?: string; // Legacy
+
+  // Persisted Lists (SuperAdmin Only)
+  dbConfigs?: DatabaseConfig[];
+  apiKeys?: ApiKey[];
+}
+
+// ... (skipping intervening interfaces for brevity if they didn't change, but replace tool needs context. 
+// Actually I'm replacing from line 38 to 226? That's too huge.
+// Let's target specific blocks.
+
+// Block 1: ApiScope and ApiKey
+
 
 export enum SimulatedProfile {
   STANDARD = 'STANDARD',
@@ -66,10 +94,14 @@ export interface SystemSettings {
   themeSecondaryColor?: string;
   themeFontFamily: string;
   themeMode: 'light' | 'dark' | 'system';
-  themeLogoUrl?: string;
-  themeFaviconUrl?: string;
-  themeBackgroundUrl?: string;
-  themeBackgroundStyle?: string;
+  themeLogoUrl?: string; // Legacy
+  themeFaviconUrl?: string; // Legacy
+  themeBackgroundUrl?: string; // Legacy
+  themeBackgroundStyle?: string; // Legacy
+
+  // Persisted Lists (SuperAdmin Only)
+  dbConfigs?: DatabaseConfig[];
+  apiKeys?: ApiKey[];
 }
 
 export interface AppBranding {
@@ -211,12 +243,13 @@ export interface AuditLog {
 
 export interface DatabaseConfig {
   id: string;
-  engine: DBEngine;
+  name: string;
+  type: string; // 'postgres' | 'mysql' etc.
   host: string;
   port: number;
-  databaseName: string;
+  database: string;
   username: string;
-  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
-  encrypted: boolean;
+  status?: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+  encrypted?: boolean;
   lastTested?: number;
 }

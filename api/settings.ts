@@ -8,12 +8,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cookies = parse(req.headers.cookie || '');
     const token = cookies.auth_token;
 
-    // 1. GET Public Settings (Theme, etc.) - No Auth needed (or lightweight)
+    // 1. GET Settings
     if (req.method === 'GET') {
         try {
             const settings = await db.systemSettings.findMany();
-            const config: Record<string, string> = {};
-            settings.forEach(s => config[s.key] = s.value);
+            const config: Record<string, any> = {};
+
+            // Check auth for sensitive keys
+            let isSuperAdmin = false;
+            if (token) {
+                const payload = authLib.verifyToken(token);
+                if (payload && (payload.role as string) === 'SUPERADMIN') {
+                    isSuperAdmin = true;
+                }
+            }
+
+            settings.forEach(s => {
+                // Parse JSON for complex objects if needed, or keep as string
+                // We'll try to parse specific keys we know are JSON
+                if (s.key === 'dbConfigs' || s.key === 'apiKeys') {
+                    if (isSuperAdmin) {
+                        try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = []; }
+                    }
+                    // If not superadmin, DO NOT include these keys
+                } else {
+                    // Public/Common settings
+                    config[s.key] = s.value;
+                }
+            });
+
+            // Ensure booleans are actually booleans for the frontend
+            if (config.aiGradingEnabled === 'true') config.aiGradingEnabled = true;
+            if (config.aiGradingEnabled === 'false') config.aiGradingEnabled = false;
+
             return res.status(200).json(config);
         } catch (error) {
             return res.status(500).json({ error: 'Failed to fetch settings' });
@@ -30,13 +57,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const updates: Record<string, any> = req.body;
-        const prismaPromises = Object.entries(updates).map(([key, value]) =>
-            db.systemSettings.upsert({
+        const prismaPromises = Object.entries(updates).map(([key, value]) => {
+            // Serialize objects/arrays to string for storage
+            const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+            return db.systemSettings.upsert({
                 where: { key },
-                update: { value: String(value) },
-                create: { key, value: String(value) }
-            })
-        );
+                update: { value: stringValue },
+                create: { key, value: stringValue }
+            });
+        });
 
         try {
             await db.$transaction(prismaPromises);
