@@ -88,19 +88,28 @@ async function handleAnnouncements(req: VercelRequest, res: VercelResponse, user
 
         const results = [];
         for (const p of posts) {
-            // Ensure authorId is valid (use the current admin's ID)
+            // Ensure authorId is valid (use the current admin's ID from token payload)
+            if (!user.userId) {
+                console.error('Missing userId in token payload:', user);
+                return res.status(403).json({ error: 'Invalid session' });
+            }
+
             const data = {
                 title: p.title,
                 content: p.content,
                 published: p.published !== undefined ? p.published : true,
-                authorId: user.id // Use session user ID, NOT payload AuthorId
+                authorId: user.userId // Corrected: use userId from payload
             };
 
             // Use Upsert to handle both New (Client-generated UUID) and Existing
             const saved = await db.blogPost.upsert({
                 where: { id: p.id },
                 update: data,
-                create: { ...data, id: p.id }
+                create: {
+                    ...data,
+                    id: p.id,
+                    createdAt: p.createdAt ? new Date(p.createdAt) : new Date()
+                }
             });
             results.push(saved);
         }
