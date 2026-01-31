@@ -24,6 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     where: {
                         published: true,
                         // TODO: Add startDate/endDate logic if schema supports it
+                        // Schema update required for scheduling
                     },
                     select: {
                         id: true,

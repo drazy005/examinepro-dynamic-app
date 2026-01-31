@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             // Admin View: All submissions
             const role = user.role as string;
-            if (role !== 'ADMIN' && role !== 'TUTOR' && role !== 'SUPERADMIN') {
+            if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
                 return res.status(403).json({ error: 'Access denied' });
             }
 
