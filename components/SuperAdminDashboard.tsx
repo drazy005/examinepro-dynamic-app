@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSystem } from '../services/SystemContext';
 import { useUsers } from '../hooks/useUsers';
 import { useToast } from '../services/ToastContext';
+import ImageUpload from './ImageUpload';
 
 interface SuperAdminDashboardProps {
   dbConfigs: DatabaseConfig[];
@@ -116,13 +117,13 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
 
       {/* Navigation */}
       <nav className="flex overflow-x-auto gap-2 pb-2">
-        {['system', 'users', 'audit', 'announcements'].map((view) => (
+        {['system', 'appearance', 'users', 'audit', 'announcements'].map((view) => (
           <button
             key={view}
             onClick={() => setActiveView(view as any)}
             className={`px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all whitespace-nowrap ${activeView === view
-                ? 'bg-slate-900 text-white shadow-lg scale-105'
-                : 'bg-white dark:bg-slate-900 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-slate-900 text-white shadow-lg scale-105'
+              : 'bg-white dark:bg-slate-900 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
           >
             {view}
@@ -150,6 +151,93 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                   <button className="px-4 py-2 rounded font-bold text-xs uppercase bg-slate-200 text-slate-500">Disabled</button>
                 </div>
                 <button onClick={handleBackup} className="w-full py-4 bg-slate-900 text-white font-black uppercase rounded-xl hover:bg-slate-800">Download System Backup</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeView === 'appearance' && (
+          <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm animate-in fade-in slide-in-from-bottom-2">
+            <h2 className="font-black text-2xl uppercase mb-6">Theme & Branding</h2>
+            <div className="space-y-8 max-w-2xl">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">App Name</label>
+                  <input
+                    className="w-full p-4 font-bold bg-slate-50 dark:bg-slate-950 rounded-xl border-2 border-transparent focus:border-indigo-500 outline-none transition-colors"
+                    value={branding.appName}
+                    onChange={e => setBranding({ ...branding, appName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <ImageUpload
+                    label="App Logo (Header)"
+                    value={branding.appIcon}
+                    onChange={(val) => setBranding({ ...branding, appIcon: val })}
+                    placeholder="https://... or Upload"
+                  />
+                  <ImageUpload
+                    label="Favicon (Browser Tab)"
+                    value={branding.faviconUrl}
+                    onChange={(val) => setBranding({ ...branding, faviconUrl: val })}
+                    placeholder="https://... or Upload"
+                    description="If empty, defaults to App Logo."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Primary Color</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      className="h-10 w-10 rounded cursor-pointer border-none bg-transparent"
+                      value={branding.primaryColor}
+                      onChange={e => setBranding({ ...branding, primaryColor: e.target.value })}
+                    />
+                    <input
+                      className="flex-1 p-3 font-mono text-xs font-bold bg-slate-50 dark:bg-slate-950 rounded-xl outline-none uppercase"
+                      value={branding.primaryColor}
+                      onChange={e => setBranding({ ...branding, primaryColor: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Border Radius</label>
+                  <select
+                    className="w-full p-3 font-bold bg-slate-50 dark:bg-slate-950 rounded-xl outline-none"
+                    value={branding.borderRadius}
+                    onChange={e => setBranding({ ...branding, borderRadius: e.target.value })}
+                  >
+                    <option value="0px">Sharp (0px)</option>
+                    <option value="8px">Soft (8px)</option>
+                    <option value="16px">Rounded (16px)</option>
+                    <option value="24px">Modern (24px)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-6 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                <label className="block text-xs font-black uppercase tracking-widest text-indigo-600 mb-2">Footer Customization</label>
+                <p className="text-[10px] text-slate-400 mb-4 font-bold">
+                  Super Admin Only. Use <span className="font-mono text-indigo-500 bg-white dark:bg-slate-900 px-1 rounded">{'{year}'}</span> as a placeholder for the current year.
+                </p>
+                <input
+                  className="w-full p-3 font-bold bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none transition-colors placeholder:text-slate-300"
+                  placeholder="© {year} ExaminePro. All Rights Reserved."
+                  value={branding.footerText || ''}
+                  onChange={e => setBranding({ ...branding, footerText: e.target.value })}
+                />
+                <div className="mt-2 text-right">
+                  <span className="text-[9px] font-black uppercase text-slate-400">Preview: </span>
+                  <span className="text-[10px] text-slate-500">
+                    {branding.footerText
+                      ? branding.footerText.replace('{year}', String(new Date().getFullYear()))
+                      : `© ${new Date().getFullYear()} ${branding.appName}. All Rights Reserved.`
+                    }
+                  </span>
+                </div>
               </div>
             </div>
           </div>

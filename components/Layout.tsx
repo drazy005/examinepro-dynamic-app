@@ -1,8 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import { User, AppBranding } from '../services/types';
 import { subscribeToLoading } from '../services/api';
 import { ToastContainer } from './Toast';
+import Footer from './Footer';
 
 interface LayoutProps {
   user: User | null;
@@ -23,6 +23,16 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, isDarkMode, o
     root.style.setProperty('--primary-color', branding.primaryColor);
     root.style.setProperty('--app-radius', branding.borderRadius);
     root.style.setProperty('--font-family', branding.fontFamily === 'mono' ? 'monospace' : branding.fontFamily === 'serif' ? 'serif' : 'Inter, sans-serif');
+
+    // Update Favicon
+    const iconUrl = branding.faviconUrl || branding.appIcon;
+    if (iconUrl) {
+      const link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']") || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'shortcut icon';
+      link.href = iconUrl;
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
 
     return () => unsubscribe();
   }, [branding]);
@@ -135,14 +145,9 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, isDarkMode, o
       <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         {children}
       </main>
+      <Footer />
 
       <ToastContainer />
-
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-8 transition-colors duration-300 relative z-10">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest leading-relaxed">
-          &copy; {new Date().getFullYear()} {branding.appName} &bull; Secure Modular Deployment
-        </div>
-      </footer>
     </div>
   );
 };

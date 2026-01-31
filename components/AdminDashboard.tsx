@@ -13,6 +13,8 @@ import { useSubmissions } from '../hooks/useSubmissions';
 import { useUsers } from '../hooks/useUsers';
 import { useQuestions } from '../hooks/useQuestions';
 import QuestionEditor from './QuestionEditor';
+import QuestionSelector from './QuestionSelector';
+import AnalyticsDashboard from './AnalyticsDashboard';
 
 interface AdminDashboardProps {
   templates: ExamTemplate[];
@@ -38,13 +40,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   const { users } = useUsers();
   const { questions: questionBank, saveQuestion, deleteQuestion } = useQuestions();
 
-  const [activeTab, setActiveTab] = useState<'exams' | 'submissions' | 'users' | 'questions'>('exams');
+  const [activeTab, setActiveTab] = useState<'exams' | 'submissions' | 'users' | 'questions' | 'analytics'>('exams');
   const [isCreating, setIsCreating] = useState(false);
   const [aiContext, setAiContext] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [submissionFilter, setSubmissionFilter] = useState('');
   const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
+  const [isSelectingQuestions, setIsSelectingQuestions] = useState(false); // For modal
   const [creatingQuestionType, setCreatingQuestionType] = useState<QuestionType | null>(null); // If set, shows the creator
 
   const handleBatchImport = async (importedQuestions: Partial<Question>[]) => {
@@ -185,9 +188,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
   return (
     <div className="space-y-8 pb-20 dark:text-slate-100">
-      <div className="flex border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-950 z-30">
-        {['exams', 'submissions', 'users', 'questions'].map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-8 py-5 text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
+      <div className="flex border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-950 z-30 overflow-x-auto">
+        {['exams', 'questions', 'submissions', 'analytics', 'users'].map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-8 py-5 text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
             {tab}
           </button>
         ))}
@@ -375,9 +378,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 </div>
 
                 <div className="flex gap-4">
-                  <button onClick={() => setEditingExam({ ...editingExam, questions: [...(editingExam.questions || []), ...questionBank.slice(0, 5)] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Add Random (5)</button>
-                  <button onClick={() => setEditingExam({ ...editingExam, questions: [...(editingExam.questions || []), ...questionBank] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Add All from Bank</button>
+                  <button onClick={() => setIsSelectingQuestions(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs shadow-md transition-all flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                    Select From Bank
+                  </button>
+                  <button onClick={() => setEditingExam({ ...editingExam, questions: [] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Clear All</button>
                 </div>
+
+                {isSelectingQuestions && (
+                  <QuestionSelector
+                    questions={questionBank}
+                    initialSelection={editingExam.questions?.map(q => q.id) || []}
+                    onClose={() => setIsSelectingQuestions(false)}
+                    onSelect={(selected) => {
+                      setEditingExam({ ...editingExam, questions: selected });
+                      setIsSelectingQuestions(false);
+                      addToast(`${selected.length} questions added to exam.`, 'success');
+                    }}
+                  />
+                )}
 
                 <div className="bg-slate-50 dark:bg-slate-800 p-6 theme-rounded">
                   <h3 className="font-bold uppercase text-xs text-slate-400 mb-4">Selected Questions ({editingExam.questions?.length})</h3>
@@ -486,6 +505,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
             </table>
           </div>
         </div>
+      )}
+
+      {activeTab === 'analytics' && (
+        <AnalyticsDashboard exams={exams} submissions={submissions} users={users} />
       )}
 
       {selectedSubmission && (

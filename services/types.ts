@@ -80,6 +80,8 @@ export interface AppBranding {
   backgroundImage: string;
   borderRadius: string; // "0px" | "8px" | "16px" | "32px" | "64px"
   fontFamily: 'sans' | 'mono' | 'serif';
+  footerText?: string;
+  faviconUrl?: string; // Separate from logo if needed
 }
 
 export interface BlogPost {
