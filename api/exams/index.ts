@@ -77,19 +77,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         try {
-            const { questions, ...examData } = req.body;
+            const {
+                title, description, category, difficulty, durationMinutes,
+                warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
+                showMcqScoreImmediately, passMark, totalPoints, published,
+                resultRelease, timerSettings, gradingPolicy, questions
+            } = req.body;
 
             const newExam = await db.exam.create({
                 data: {
-                    ...examData,
+                    title, description, category, difficulty, durationMinutes,
+                    warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
+                    showMcqScoreImmediately, passMark, totalPoints, published,
+                    resultRelease, timerSettings, gradingPolicy,
                     questions: {
-                        create: questions.map((q: any) => ({
+                        create: questions?.map((q: any) => ({
                             type: q.type,
                             text: q.text,
+                            imageUrl: q.imageUrl,
                             options: q.options,
                             correctAnswer: q.correctAnswer, // Stored securely
-                            points: q.points
-                        }))
+                            points: q.points,
+                            category: q.category
+                        })) || []
                     }
                 },
                 include: { questions: true }

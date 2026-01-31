@@ -33,17 +33,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(questions);
     }
 
-    // POST: Create/Update Question (Independent of Exam)
+    // POST: Create Question (Independent of Exam)
     if (req.method === 'POST') {
-        // Use this for adding questions to the bank directly
-        const data = req.body;
-        const q = await db.question.create({
-            data: {
-                ...data,
-                correctAnswer: data.correctAnswer // Stored securely
-            }
-        });
-        return res.status(200).json(q);
+        try {
+            const { type, text, options, correctAnswer, points, category, imageUrl } = req.body;
+
+            const q = await db.question.create({
+                data: {
+                    type: type || 'MCQ',
+                    text: text || 'New Question',
+                    options: options || [],
+                    correctAnswer: correctAnswer || '',
+                    points: points || 1,
+                    category,
+                    imageUrl
+                }
+            });
+            return res.status(200).json(q);
+        } catch (e) {
+            console.error('Create Question Error:', e);
+            return res.status(500).json({ error: 'Failed to create question' });
+        }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

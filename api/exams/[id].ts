@@ -59,14 +59,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!isAdmin) return res.status(403).json({ error: 'Forbidden' });
 
         try {
-            const { questions, ...data } = req.body;
+            const {
+                title, description, category, difficulty, durationMinutes,
+                warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
+                showMcqScoreImmediately, passMark, totalPoints, published,
+                resultRelease, timerSettings, gradingPolicy, questions
+            } = req.body;
 
             // Update exam and replace questions in a transaction
             const updatedExam = await db.$transaction(async (tx: any) => {
                 // 1. Update basic exam details
                 const exam = await tx.exam.update({
                     where: { id },
-                    data: { ...data }
+                    data: {
+                        title, description, category, difficulty, durationMinutes,
+                        warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
+                        showMcqScoreImmediately, passMark, totalPoints, published,
+                        resultRelease, timerSettings, gradingPolicy
+                    }
                 });
 
                 // 2. If questions are provided, replace them
@@ -86,7 +96,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         where: { id },
                         data: {
                             questions: {
-                                deleteMany: {}, // Delete all existing
                                 create: questions.map((q: any) => ({
                                     type: q.type,
                                     text: q.text,

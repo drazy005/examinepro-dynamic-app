@@ -121,10 +121,25 @@ export const api = {
 
   questions: {
     list: async (): Promise<Question[]> => withLoading(request<Question[]>('/questions')),
-    save: async (question: Question): Promise<Question> => withLoading(request<Question>('/questions', {
+
+    create: async (question: Question): Promise<Question> => withLoading(request<Question>('/questions', {
       method: 'POST',
       body: JSON.stringify(question)
     })),
+
+    update: async (question: Question): Promise<Question> => withLoading(request<Question>(`/questions/${question.id}`, {
+      method: 'PUT', // Requires api/questions/[id].ts
+      body: JSON.stringify(question)
+    })),
+
+    save: async (question: Question): Promise<Question> => {
+      // Logic handled by consumer usually, but fallback here
+      if (question.id && question.id.length > 10) { // Simple check for existing ID
+        return api.questions.update(question);
+      }
+      return api.questions.create(question);
+    },
+
     delete: async (id: string) => withLoading(request(`/questions/${id}`, { method: 'DELETE' }))
   },
 
