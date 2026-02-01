@@ -138,7 +138,22 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
     return () => clearInterval(timer);
   }, [timeLeft, handleSubmit, exam.timerSettings.autoSubmitOnExpiry]);
 
+  if (!randomizedExamData.questions || randomizedExamData.questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 h-screen bg-slate-50 dark:bg-slate-900">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Exam Setup Error</h2>
+        <p className="text-slate-500 mb-4">This exam has no questions configured.</p>
+        <button onClick={onCancel} className="bg-indigo-600 text-white px-6 py-2 rounded theme-rounded">Return</button>
+      </div>
+    );
+  }
+
   const currentQuestion = randomizedExamData.questions[currentIndex];
+  // Safety check for index out of bounds (shouldn't happen with valid data but good for robustness)
+  if (!currentQuestion) {
+    return <div>Error loading question.</div>;
+  }
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;

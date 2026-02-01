@@ -25,10 +25,12 @@ interface AdminDashboardProps {
   onUpdateBankQuestion?: (id: string, updated: Question) => void;
   onDeleteFromBank?: (id: string) => void;
   onPreviewExam: (exam: Exam) => void;
+  onTogglePublish: (id: string, published: boolean) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   onPreviewExam,
+  onTogglePublish,
 }) => {
   const { settings: systemSettings } = useSystem();
   const { addToast } = useToast();
@@ -446,7 +448,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                         <span className="text-indigo-600 text-xs font-bold uppercase">Actions</span>
                         <div className="flex gap-2">
                           <button onClick={(e) => {
-                            e.stopPropagation(); setEditingExam({ ...exam, questions: exam.questions || [] }); setIsCreating(true);
+                            e.stopPropagation(); onTogglePublish(exam.id, !exam.published);
+                          }} className={`text-xs font-bold uppercase hover:underline z-10 ${exam.published ? 'text-slate-400' : 'text-green-600'}`}>{exam.published ? 'Hide' : 'Publish'}</button>
+
+                          <button onClick={(e) => {
+                            e.stopPropagation(); setEditingExam(exam); setIsCreating(true);
                           }} className="text-indigo-600 text-xs font-bold uppercase hover:underline z-10">Edit</button>
 
                           <button onClick={(e) => {

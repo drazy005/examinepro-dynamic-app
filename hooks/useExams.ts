@@ -68,5 +68,14 @@ export const useExams = () => {
     }
   }, [exams, addToast]);
 
-  return { exams, saveExam, deleteExam, bulkDeleteExams };
+  const refreshExams = async () => {
+    try {
+      const examsData = await api.exams.list();
+      setExams(examsData);
+    } catch (e) {
+      // silent fetch? or toast
+    }
+  };
+
+  return { exams, setExams, saveExam, deleteExam, bulkDeleteExams, refreshExams };
 };

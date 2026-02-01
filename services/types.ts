@@ -67,6 +67,7 @@ export interface SystemSettings {
   themeFaviconUrl?: string; // Legacy
   themeBackgroundUrl?: string; // Legacy
   themeBackgroundStyle?: string; // Legacy
+  maintenanceMode: boolean;
 
   // Persisted Lists (SuperAdmin Only)
   dbConfigs?: DatabaseConfig[];
@@ -86,6 +87,16 @@ export enum SimulatedProfile {
   ACCESSIBILITY = 'ACCESSIBILITY'
 }
 
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  fromName: string;
+  fromEmail: string;
+  secure: boolean;
+}
+
 export interface SystemSettings {
   aiGlobalEnabled: boolean;
   aiQuestionGenEnabled: boolean;
@@ -98,10 +109,12 @@ export interface SystemSettings {
   themeFaviconUrl?: string; // Legacy
   themeBackgroundUrl?: string; // Legacy
   themeBackgroundStyle?: string; // Legacy
+  maintenanceMode: boolean;
 
   // Persisted Lists (SuperAdmin Only)
   dbConfigs?: DatabaseConfig[];
   apiKeys?: ApiKey[];
+  smtpConfig?: SmtpConfig;
 }
 
 export interface AppBranding {

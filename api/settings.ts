@@ -41,6 +41,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (config.aiGradingEnabled === 'true') config.aiGradingEnabled = true;
             if (config.aiGradingEnabled === 'false') config.aiGradingEnabled = false;
 
+            if (config.maintenanceMode === 'true') config.maintenanceMode = true;
+            if (config.maintenanceMode === 'false') config.maintenanceMode = false;
+
             return res.status(200).json(config);
         } catch (error) {
             return res.status(500).json({ error: 'Failed to fetch settings' });

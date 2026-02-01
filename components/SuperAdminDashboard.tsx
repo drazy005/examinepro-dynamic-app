@@ -22,7 +22,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
   const { users } = useUsers();
   const { addToast } = useToast();
 
-  const [activeView, setActiveView] = useState<'system' | 'appearance' | 'audit' | 'users' | 'database' | 'api-keys' | 'deployment' | 'announcements'>('system');
+  const [activeView, setActiveView] = useState<'system' | 'appearance' | 'audit' | 'users' | 'database' | 'api-keys' | 'email-server' | 'announcements'>('system');
   const [logFilter, setLogFilter] = useState<AuditLog['severity'] | 'ALL'>('ALL');
   const [logSearch, setLogSearch] = useState('');
   const [systemLoad, setSystemLoad] = useState(42);
@@ -108,7 +108,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
 
       addToast('System backup downloaded.', 'success');
       // Log event
-      logEvent('SUPERADMIN', 'System Backup', 'User initiated full system backup download');
+      logEvent(null, 'System Backup', 'User initiated full system backup download');
     } catch (e) {
       addToast("Backup failed to generate.", 'error');
     }
@@ -157,7 +157,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
 
       {/* Navigation */}
       <nav className="flex overflow-x-auto gap-2 pb-2">
-        {['system', 'appearance', 'users', 'audit', 'announcements', 'database', 'api-keys'].map((view) => (
+        {['system', 'appearance', 'users', 'audit', 'announcements', 'database', 'api-keys', 'email-server'].map((view) => (
           <button
             key={view}
             onClick={() => setActiveView(view as any)}
@@ -197,7 +197,10 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                 </div>
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-xl">
                   <span className="font-bold">Maintenance Mode</span>
-                  <button className="px-4 py-2 rounded font-bold text-xs uppercase bg-slate-200 text-slate-500">Disabled</button>
+                  <button onClick={() => updateSettings({ maintenanceMode: !settings.maintenanceMode })}
+                    className={`px-4 py-2 rounded font-bold text-xs uppercase ${settings.maintenanceMode ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                    {settings.maintenanceMode ? 'Active' : 'Disabled'}
+                  </button>
                 </div>
                 <button onClick={handleBackup} className="w-full py-4 bg-slate-900 text-white font-black uppercase rounded-xl hover:bg-slate-800">Download System Backup</button>
               </div>
@@ -440,6 +443,66 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {activeView === 'email-server' && (
+          <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+            <h2 className="font-black text-2xl uppercase mb-6">Email Server Config</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              {/* SMTP CONFIG */}
+              <div className="space-y-4">
+                <h3 className="font-bold uppercase text-xs tracking-widest text-slate-400">SMTP Settings</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <input placeholder="Host (e.g. smtp.gmail.com)" value={settings.smtpConfig?.host || ''} onChange={e => setSettings({ ...settings, smtpConfig: { ...settings.smtpConfig!, host: e.target.value } })} className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold" />
+                  <input placeholder="Port (e.g. 587)" value={settings.smtpConfig?.port || ''} onChange={e => setSettings({ ...settings, smtpConfig: { ...settings.smtpConfig!, port: parseInt(e.target.value) || 587 } })} className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <input placeholder="User" value={settings.smtpConfig?.user || ''} onChange={e => setSettings({ ...settings, smtpConfig: { ...settings.smtpConfig!, user: e.target.value } })} className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold" />
+                  <input type="password" placeholder="Password" value={settings.smtpConfig?.pass || ''} onChange={e => setSettings({ ...settings, smtpConfig: { ...settings.smtpConfig!, pass: e.target.value } })} className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <input placeholder="From Name" value={settings.smtpConfig?.fromName || ''} onChange={e => setSettings({ ...settings, smtpConfig: { ...settings.smtpConfig!, fromName: e.target.value } })} className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold" />
+                  <input placeholder="From Email" value={settings.smtpConfig?.fromEmail || ''} onChange={e => setSettings({ ...settings, smtpConfig: { ...settings.smtpConfig!, fromEmail: e.target.value } })} className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={settings.smtpConfig?.secure || false} onChange={e => setSettings({ ...settings, smtpConfig: { ...settings.smtpConfig!, secure: e.target.checked } })} />
+                  <span className="text-sm font-bold text-slate-500">Secure (SSL/TLS)</span>
+                </div>
+                <button onClick={() => updateSettings({ smtpConfig: settings.smtpConfig })} className="w-full py-3 bg-indigo-600 text-white font-bold uppercase rounded-lg">Save Config</button>
+              </div>
+
+              {/* BROADCAST */}
+              <div className="space-y-4 border-l pl-8 border-slate-100 dark:border-slate-800">
+                <h3 className="font-bold uppercase text-xs tracking-widest text-slate-400">Broadcast Email</h3>
+                <input id="broadcast-subject" placeholder="Subject" className="w-full p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold" />
+                <textarea id="broadcast-message" placeholder="Message (HTML allowed)" className="w-full h-32 p-3 bg-slate-50 dark:bg-slate-950 rounded-lg text-sm" />
+                <select id="broadcast-role" className="w-full p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold text-xs uppercase">
+                  <option value="ALL">All Users</option>
+                  <option value="CANDIDATE">Candidates Only</option>
+                  <option value="ADMIN">Admins Only</option>
+                </select>
+                <button onClick={async () => {
+                  const subj = (document.getElementById('broadcast-subject') as HTMLInputElement).value;
+                  const msg = (document.getElementById('broadcast-message') as HTMLTextAreaElement).value;
+                  const role = (document.getElementById('broadcast-role') as HTMLSelectElement).value;
+                  if (!subj || !msg) { addToast("Subject/Message required", 'error'); return; }
+                  if (!confirm(`Send to ${role}?`)) return;
+
+                  try {
+                    const res = await fetch('/api/admin/broadcast-email', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ subject: subj, message: msg, targetRole: role })
+                    });
+                    const data = await res.json();
+                    if (data.success) addToast(`Sent to ${data.sent} users.`, 'success');
+                    else addToast('Failed to send.', 'error');
+                  } catch (e) { addToast('Network error', 'error'); }
+                }} className="w-full py-3 bg-emerald-600 text-white font-bold uppercase rounded-lg">Send Broadcast</button>
+              </div>
+            </div>
           </div>
         )}
 

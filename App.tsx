@@ -6,6 +6,7 @@ import AdminDashboard from './components/AdminDashboard';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import CandidatePortal from './components/CandidatePortal';
 import ExamInterface from './components/ExamInterface';
+import SubmissionDetailModal from './components/SubmissionDetailModal';
 import Auth from './components/Auth';
 import { initializeCspMonitoring } from './services/securityService';
 import { useSystem } from './services/SystemContext';
@@ -32,7 +33,7 @@ const App: React.FC = () => {
 
   // Hooks
   const { questions: fetchedQuestions, saveQuestion, deleteQuestion, refreshQuestions } = useQuestions();
-  const { exams, saveExam, deleteExam, bulkDeleteExams } = useExams();
+  const { exams, saveExam, deleteExam, bulkDeleteExams, refreshExams } = useExams();
   const { submissions, updateSubmission, bulkDeleteSubmissions } = useSubmissions();
   const { users } = useUsers();
 
@@ -94,6 +95,16 @@ const App: React.FC = () => {
     }
   };
 
+  const handleTogglePublish = async (id: string, published: boolean) => {
+    try {
+      setExams(prev => prev.map(e => e.id === id ? { ...e, published } : e));
+      await api.exams.save({ ...exams.find(e => e.id === id)!, published });
+      addToast(`Exam ${published ? 'Published' : 'Hidden'}`, 'success');
+    } catch (e) {
+      addToast('Failed to update status', 'error');
+    }
+  };
+
   // Handlers for Admin Dashboard
   const handleManualGrade = async (submissionId: string, questionId: string, result: QuestionResult) => {
     const sub = submissions.find(s => s.id === submissionId);
@@ -136,6 +147,17 @@ const App: React.FC = () => {
     if (sub) {
       await updateSubmission({ ...sub, resultsReleased: true });
       addToast('Result released to candidate', 'success');
+    }
+  };
+
+  const [viewingSubmission, setViewingSubmission] = useState<{ sub: Submission, exam: Exam } | null>(null);
+
+  const handleViewDetails = (sub: Submission) => {
+    const exam = exams.find(e => e.id === sub.examId);
+    if (exam) {
+      setViewingSubmission({ sub, exam });
+    } else {
+      addToast("Exam data not found for this submission.", "error");
     }
   };
 
@@ -191,12 +213,14 @@ const App: React.FC = () => {
           onDeleteTemplate={id => setTemplates(p => p.filter(t => t.id !== id))}
 
           onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); }}
+          onTogglePublish={handleTogglePublish}
         />;
 
       case UserRole.CANDIDATE:
         return <CandidatePortal
           announcements={announcements.filter(p => p.published)}
           onTakeExam={e => setActiveExam(e)}
+          onViewDetails={handleViewDetails}
         />;
 
       default:
@@ -218,9 +242,37 @@ const App: React.FC = () => {
     return <Auth onLogin={handleLogin} onRegister={() => { }} />;
   }
 
+  // Maintenance Mode Check
+  if (useSystem().settings.maintenanceMode && user.role === UserRole.CANDIDATE) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-8 text-center space-y-6">
+        <div className="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center">
+          <svg className="w-12 h-12 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">System Maintenance</h1>
+        <p className="text-slate-500 max-w-md text-lg">
+          We are currently performing scheduled maintenance to improve your experience. Please check back shortly.
+        </p>
+        <button onClick={handleLogout} className="text-indigo-600 font-bold uppercase text-xs hover:underline">Logout</button>
+      </div>
+    );
+  }
+
   return (
     <Layout user={user} onLogout={handleLogout} isDarkMode={isDarkMode} onToggleDarkMode={toggleDarkMode} branding={branding}>
       {renderContent()}
+      {viewingSubmission && (
+        <SubmissionDetailModal
+          submission={viewingSubmission.sub}
+          exam={viewingSubmission.exam}
+          onClose={() => setViewingSubmission(null)}
+          systemSettings={useSystem().settings}
+          isAdmin={false} // Read-only for candidates
+          onManualGrade={() => { }} // No-op
+        />
+      )}
     </Layout>
   );
 };

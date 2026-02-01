@@ -1,49 +1,88 @@
 import nodemailer from 'nodemailer';
+import { db } from './db.js';
+import { SystemSettings, SmtpConfig } from '../../services/types.js'; // Ensure correct import path or redefine type if used in backend only context
 
-const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
-const SMTP_FROM = process.env.SMTP_FROM || '"ExaminePro System" <noreply@examinepro.com>';
+// Backend-only interface for clarity if types sharing is complex
+interface LocalSmtpConfig {
+    host: string;
+    port: number;
+    user: string;
+    pass: string;
+    fromName: string;
+    fromEmail: string;
+    secure: boolean;
+}
 
-// Create reusable transporter
+// Fallback ENV config
+const ENV_SMTP = {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.SMTP_FROM || '"ExaminePro System" <noreply@examinepro.com>'
+};
+
 // Create reusable transporter lazily
-let transporter: nodemailer.Transporter | null = null;
-
-const getTransporter = () => {
-    if (transporter) return transporter;
-
-    if (!SMTP_HOST) return null;
-
+const getTransporter = async () => {
+    // 1. Try DB Config first
     try {
-        transporter = nodemailer.createTransport({
-            host: SMTP_HOST,
-            port: SMTP_PORT,
-            secure: SMTP_PORT === 465, // true for 465, false for other ports
+        const settingsRecord = await db.systemSettings.findUnique({ where: { key: 'smtpConfig' } });
+        if (settingsRecord && settingsRecord.value) {
+            const dbConfig: LocalSmtpConfig = JSON.parse(settingsRecord.value);
+            return nodemailer.createTransport({
+                host: dbConfig.host,
+                port: dbConfig.port,
+                secure: dbConfig.secure,
+                auth: {
+                    user: dbConfig.user,
+                    pass: dbConfig.pass,
+                },
+            });
+        }
+    } catch (e) {
+        console.warn('Failed to load SMTP config from DB, falling back to ENV.', e);
+    }
+
+    // 2. Fallback to ENV
+    if (ENV_SMTP.host) {
+        return nodemailer.createTransport({
+            host: ENV_SMTP.host,
+            port: ENV_SMTP.port,
+            secure: ENV_SMTP.port === 465,
             auth: {
-                user: SMTP_USER,
-                pass: SMTP_PASS,
+                user: ENV_SMTP.user,
+                pass: ENV_SMTP.pass,
             },
         });
-        return transporter;
-    } catch (e) {
-        console.error('Failed to create email transporter:', e);
-        return null;
     }
+
+    return null;
+};
+
+const getFromAddress = async () => {
+    try {
+        const settingsRecord = await db.systemSettings.findUnique({ where: { key: 'smtpConfig' } });
+        if (settingsRecord && settingsRecord.value) {
+            const conf = JSON.parse(settingsRecord.value) as LocalSmtpConfig;
+            return `"${conf.fromName}" <${conf.fromEmail}>`;
+        }
+    } catch { }
+    return ENV_SMTP.from;
 };
 
 export const emailLib = {
     sendVerificationEmail: async (to: string, token: string) => {
-        const mailer = getTransporter();
+        const mailer = await getTransporter();
         if (!mailer) {
-            console.log('Skipping email (no SMTP_HOST or invalid config):', to, token);
+            console.log('Skipping verification email (no config):', to);
             return;
         }
 
         const link = `${process.env.APP_URL || 'http://localhost:3000'}/verify?token=${token}`;
+        const from = await getFromAddress();
 
         await mailer.sendMail({
-            from: SMTP_FROM,
+            from,
             to,
             subject: 'Verify your Account - ExaminePro',
             html: `
@@ -58,13 +97,14 @@ export const emailLib = {
     },
 
     sendPasswordResetEmail: async (to: string, token: string) => {
-        const mailer = getTransporter();
+        const mailer = await getTransporter();
         if (!mailer) return;
 
         const link = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+        const from = await getFromAddress();
 
         await mailer.sendMail({
-            from: SMTP_FROM,
+            from,
             to,
             subject: 'Reset Password - ExaminePro',
             html: `
@@ -76,5 +116,24 @@ export const emailLib = {
                 </div>
             `
         });
+    },
+
+    sendBroadcastEmail: async (to: string, subject: string, htmlContent: string) => {
+        const mailer = await getTransporter();
+        if (!mailer) return false;
+
+        const from = await getFromAddress();
+        try {
+            await mailer.sendMail({
+                from,
+                to,
+                subject,
+                html: htmlContent
+            });
+            return true;
+        } catch (e) {
+            console.error('Failed to send broadcast:', e);
+            return false;
+        }
     }
 };

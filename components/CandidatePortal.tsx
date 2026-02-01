@@ -6,9 +6,10 @@ import { format } from 'date-fns';
 interface CandidatePortalProps {
     announcements: BlogPost[];
     onTakeExam: (exam: Exam) => void;
+    onViewDetails: (sub: Submission) => void;
 }
 
-const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTakeExam }) => {
+const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTakeExam, onViewDetails }) => {
     const [availableExams, setAvailableExams] = useState<Exam[]>([]);
     const [history, setHistory] = useState<Submission[]>([]);
     const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
@@ -110,7 +111,7 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
                                         <td className="p-4 text-slate-500">{format(sub.submittedAt, 'MMM dd, yyyy')}</td>
                                         <td className="p-4">{getResultDisplay(sub)}</td>
                                         <td className="p-4">
-                                            {sub.resultsReleased && <button className="text-indigo-600 hover:underline text-sm">View Details</button>}
+                                            {sub.resultsReleased && <button onClick={() => onViewDetails(sub)} className="text-indigo-600 hover:underline text-sm font-bold">View Details</button>}
                                         </td>
                                     </tr>
                                 ))}
