@@ -66,15 +66,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             // Update exam and replace questions in a transaction
             const updatedExam = await db.$transaction(async (tx: any) => {
-                // 1. Update basic exam details
+                // 1. Update basic exam details dynamically to allow partial updates (like just publishing)
+                const data: any = {};
+                if (title !== undefined) data.title = title;
+                if (description !== undefined) data.description = description;
+                if (category !== undefined) data.category = category;
+                if (difficulty !== undefined) data.difficulty = difficulty;
+                if (durationMinutes !== undefined) data.durationMinutes = durationMinutes;
+                if (warningTimeThreshold !== undefined) data.warningTimeThreshold = warningTimeThreshold;
+                if (resultReleaseMode !== undefined) data.resultReleaseMode = resultReleaseMode;
+                if (scheduledReleaseDate !== undefined) data.scheduledReleaseDate = scheduledReleaseDate;
+                if (showMcqScoreImmediately !== undefined) data.showMcqScoreImmediately = showMcqScoreImmediately;
+                if (passMark !== undefined) data.passMark = passMark;
+                if (totalPoints !== undefined) data.totalPoints = totalPoints;
+                if (published !== undefined) data.published = published;
+                if (resultRelease !== undefined) data.resultRelease = resultRelease;
+                if (timerSettings !== undefined) data.timerSettings = timerSettings;
+                if (gradingPolicy !== undefined) data.gradingPolicy = gradingPolicy;
+
                 const exam = await tx.exam.update({
                     where: { id },
-                    data: {
-                        title, description, category, difficulty, durationMinutes,
-                        warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
-                        showMcqScoreImmediately, passMark, totalPoints, published,
-                        resultRelease, timerSettings, gradingPolicy
-                    }
+                    data
                 });
 
                 // 2. If questions are provided, replace them

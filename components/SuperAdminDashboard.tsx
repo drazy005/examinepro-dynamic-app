@@ -48,6 +48,13 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
   const apiKeys = settings.apiKeys || [];
   const dbConfigs = settings.dbConfigs || [];
 
+  // Computed Validation State
+  const isEmailConfigValid = useMemo(() => {
+    const s = settings.smtpConfig;
+    if (!s) return false;
+    return !!(s.host && s.user && s.pass && s.fromEmail);
+  }, [settings.smtpConfig]);
+
   const updateSettings = async (updates: Partial<typeof settings>) => {
     // Optimistic Update
     const oldSettings = { ...settings };
@@ -497,7 +504,9 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                     }
                   }} className="bg-slate-800 text-white px-6 py-3 rounded-lg font-bold uppercase text-xs">Test Connection</button>
                 </div>
-                <button onClick={async () => {
+                {!isEmailConfigValid && <div className="text-red-500 text-xs font-bold text-center">Please fill all fields to enable saving.</div>}
+
+                <button disabled={!isEmailConfigValid} onClick={async () => {
                   setSaveModal({ show: true, status: 'processing', message: 'Verifying and Saving Configuration...' });
                   try {
                     await updateSettings({ smtpConfig: settings.smtpConfig });
@@ -506,7 +515,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                   } catch (e) {
                     setSaveModal({ show: true, status: 'error', message: 'Failed to save configuration.' });
                   }
-                }} className="w-full py-3 bg-indigo-600 text-white font-bold uppercase rounded-lg">Save Config</button>
+                }} className={`w-full py-3 text-white font-bold uppercase rounded-lg transition-colors ${!isEmailConfigValid ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>Save Config</button>
               </div>
 
               {/* BROADCAST */}

@@ -60,6 +60,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const updates: Record<string, any> = req.body;
+
+        // Validation for sensitive configs
+        if (updates.smtpConfig) {
+            const smtp = typeof updates.smtpConfig === 'string' ? JSON.parse(updates.smtpConfig) : updates.smtpConfig;
+            if (!smtp.host || !smtp.user || !smtp.pass || !smtp.fromEmail) {
+                return res.status(400).json({ error: 'Invalid SMTP Config: Missing fields' });
+            }
+        }
+
         const prismaPromises = Object.entries(updates).map(([key, value]) => {
             // Serialize objects/arrays to string for storage
             const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
