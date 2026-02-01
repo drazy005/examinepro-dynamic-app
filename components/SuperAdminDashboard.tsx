@@ -491,7 +491,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                   if (!confirm(`Send to ${role}?`)) return;
 
                   try {
-                    const res = await fetch('/api/admin/broadcast-email', {
+                    const res = await fetch('/api/admin/broadcast', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ subject: subj, message: msg, targetRole: role })

@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
+import { emailLib } from '../_lib/email.js';
 import { parse } from 'cookie';
 
 
@@ -26,6 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'users': return await handleUsers(req, res, user);
             case 'logs': return await handleLogs(req, res, user);
             case 'announcements': return await handleAnnouncements(req, res, user);
+            case 'broadcast': return await handleBroadcast(req, res, user);
             default: return res.status(404).json({ error: 'Resource not found' });
         }
     } catch (error: any) {
@@ -117,4 +119,65 @@ async function handleAnnouncements(req: VercelRequest, res: VercelResponse, user
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
+}
+
+async function handleBroadcast(req: VercelRequest, res: VercelResponse, user: any) {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+    // Double check SUPERADMIN
+    if ((user.role as string) !== 'SUPERADMIN') return res.status(403).json({ error: 'Forbidden' });
+
+    const { subject, message, targetRole } = req.body;
+
+    if (!subject || !message) {
+        return res.status(400).json({ error: 'Subject and message are required' });
+    }
+
+    // Determine Recipients
+    let whereClause: any = {};
+    if (targetRole && targetRole !== 'ALL') {
+        whereClause.role = targetRole;
+    }
+
+    try {
+        const recipients = await db.user.findMany({
+            where: whereClause,
+            select: { email: true, name: true }
+        });
+
+        if (recipients.length === 0) {
+            return res.status(200).json({ success: true, count: 0, message: 'No recipients found' });
+        }
+
+        // Cap at 50 for this version
+        const limitedRecipients = recipients.slice(0, 50);
+
+        let sentCount = 0;
+        const promises = limitedRecipients.map(async (u) => {
+            const html = `
+                <div style="font-family: sans-serif; padding: 20px;">
+                    <p>Hello ${u.name},</p>
+                    <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #4f46e5; background: #f9fafb;">
+                        ${message.replace(/\n/g, '<br/>')}
+                    </div>
+                    <p style="font-size: 12px; color: #999;">You received this email as a registered user of ExaminePro.</p>
+                </div>
+            `;
+            const success = await emailLib.sendBroadcastEmail(u.email, subject, html);
+            if (success) sentCount++;
+        });
+
+        await Promise.all(promises);
+
+        return res.status(200).json({
+            success: true,
+            sent: sentCount,
+            total: recipients.length,
+            overflow: recipients.length > 50 ? 'Limited to 50 for safety' : undefined
+        });
+
+    } catch (e: any) {
+        console.error("Broadcast failed:", e);
+        return res.status(500).json({ error: 'Failed to broadcast' });
+    }
 }
