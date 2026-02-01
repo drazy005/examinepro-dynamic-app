@@ -95,12 +95,6 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, isDarkMode, o
               <nav className="hidden md:flex gap-6">
                 <button onClick={() => window.location.reload()} className="text-xs font-bold uppercase text-white/80 hover:text-white tracking-widest">Dashboard</button>
                 {user?.role === 'CANDIDATE' && <button className="text-xs font-bold uppercase text-white/80 hover:text-white tracking-widest">My Exams</button>}
-                {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
-                  <>
-                    <button className="text-xs font-bold uppercase text-white/80 hover:text-white tracking-widest">Create Exam</button>
-                    <button className="text-xs font-bold uppercase text-white/80 hover:text-white tracking-widest">Results</button>
-                  </>
-                )}
               </nav>
             </div>
 

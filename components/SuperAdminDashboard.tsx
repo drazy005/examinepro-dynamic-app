@@ -49,13 +49,17 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
   const dbConfigs = settings.dbConfigs || [];
 
   const updateSettings = async (updates: Partial<typeof settings>) => {
+    // Optimistic Update
+    const oldSettings = { ...settings };
     const newSettings = { ...settings, ...updates };
-    setSettings(newSettings); // Optimistic
+    setSettings(newSettings);
+
     try {
       await api.admin.updateSettings(updates);
     } catch (e) {
-      addToast('Failed to save settings', 'error');
-      // Revert? For now, we assume success or user refresh fixes it.
+      console.error("Settings Update Failed:", e);
+      setSettings(oldSettings); // Revert on failure
+      addToast('Failed to save settings (server error)', 'error');
     }
   };
 

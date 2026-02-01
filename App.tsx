@@ -101,7 +101,8 @@ const App: React.FC = () => {
       // Use update instead of save for existing exams to prevent "status" errors
       const currentExam = exams.find(e => e.id === id);
       if (currentExam) {
-        await api.exams.update({ ...currentExam, published });
+        // Only send the field we want to update to avoid triggering full exam re-creation/question replacement
+        await api.exams.update({ id, published } as any);
         addToast(`Exam ${published ? 'Published' : 'Hidden'}`, 'success');
       }
     } catch (e) {
