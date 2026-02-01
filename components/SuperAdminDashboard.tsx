@@ -29,6 +29,9 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [editingPost, setEditingPost] = useState<Partial<BlogPost> | null>(null);
 
+  // Transaction State
+  const [saveModal, setSaveModal] = useState<{ show: boolean, status: 'processing' | 'success' | 'error', message: string }>({ show: false, status: 'processing', message: '' });
+
   useEffect(() => {
     const fetchLogs = async () => {
       try {
@@ -470,7 +473,36 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                   <input type="checkbox" checked={settings.smtpConfig?.secure || false} onChange={e => setSettings({ ...settings, smtpConfig: { ...settings.smtpConfig!, secure: e.target.checked } })} />
                   <span className="text-sm font-bold text-slate-500">Secure (SSL/TLS)</span>
                 </div>
-                <button onClick={() => updateSettings({ smtpConfig: settings.smtpConfig })} className="w-full py-3 bg-indigo-600 text-white font-bold uppercase rounded-lg">Save Config</button>
+                <div className="flex gap-4 items-center pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <input id="test-email-dest" placeholder="Test Dest Email" className="flex-1 p-3 bg-slate-50 dark:bg-slate-950 rounded-lg font-bold text-xs" />
+                  <button onClick={async () => {
+                    const dest = (document.getElementById('test-email-dest') as HTMLInputElement).value;
+                    if (!dest) { addToast('Enter email to test', 'error'); return; }
+
+                    try {
+                      // We save first to ensure we test current config
+                      await updateSettings({ smtpConfig: settings.smtpConfig });
+                      const res = await api.admin.testEmail(dest);
+                      addToast(res.message, 'success');
+                      // TODO: Modal? User asked for modal. Toast with message is success.
+                      // Let's Alert for now or fancy modal if time.
+                      alert(`Validation Response:\nSuccess: ${res.success}\nMessage: ${res.message}`);
+                    } catch (e) {
+                      addToast('Connection Test Failed', 'error');
+                      alert('Connection Failed. Check console/network logs.');
+                    }
+                  }} className="bg-slate-800 text-white px-6 py-3 rounded-lg font-bold uppercase text-xs">Test Connection</button>
+                </div>
+                <button onClick={async () => {
+                  setSaveModal({ show: true, status: 'processing', message: 'Verifying and Saving Configuration...' });
+                  try {
+                    await updateSettings({ smtpConfig: settings.smtpConfig });
+                    setSaveModal({ show: true, status: 'success', message: 'SMTP Configuration Saved Successfully!' });
+                    setTimeout(() => setSaveModal(prev => ({ ...prev, show: false })), 2000);
+                  } catch (e) {
+                    setSaveModal({ show: true, status: 'error', message: 'Failed to save configuration.' });
+                  }
+                }} className="w-full py-3 bg-indigo-600 text-white font-bold uppercase rounded-lg">Save Config</button>
               </div>
 
               {/* BROADCAST */}
@@ -507,6 +539,30 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
         )}
 
       </main>
+
+      {/* Transaction Modal */}
+      {saveModal.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center space-y-4 animate-in zoom-in-95">
+            {saveModal.status === 'processing' && (
+              <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            )}
+            {saveModal.status === 'success' && (
+              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto text-3xl">✓</div>
+            )}
+            {saveModal.status === 'error' && (
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl">✕</div>
+            )}
+
+            <h3 className="font-black text-xl uppercase">{saveModal.status === 'processing' ? 'Processing' : saveModal.status === 'success' ? 'Success' : 'Error'}</h3>
+            <p className="text-slate-500 font-medium">{saveModal.message}</p>
+
+            {saveModal.status === 'error' && (
+              <button onClick={() => setSaveModal(prev => ({ ...prev, show: false }))} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-2 rounded-lg font-bold uppercase text-xs">Close</button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 });

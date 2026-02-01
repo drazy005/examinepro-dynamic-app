@@ -257,7 +257,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        <button onClick={() => setSelectedSubmission({ sub, exam: exam! })} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase tracking-wide">Review</button>
+                        <button onClick={() => {
+                          if (!exam) { addToast("Exam for this submission was deleted.", "error"); return; }
+                          setSelectedSubmission({ sub, exam: exam });
+                        }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase tracking-wide">Review</button>
                       </td>
                     </tr>
                   );

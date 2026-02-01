@@ -88,6 +88,7 @@ export const api = {
   exams: {
     list: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams')),
     listAvailable: async (): Promise<Exam[]> => withLoading(request<Exam[]>('/exams?mode=available')),
+    get: async (id: string): Promise<Exam> => withLoading(request<Exam>(`/exams/${id}`)),
 
     create: async (exam: Exam): Promise<Exam> => withLoading(request<Exam>('/exams', {
       method: 'POST',
@@ -155,6 +156,10 @@ export const api = {
     updateSettings: async (settings: any): Promise<any> => withLoading(request<any>('/settings', {
       method: 'POST',
       body: JSON.stringify(settings)
+    })),
+    testEmail: async (email: string): Promise<{ success: boolean; message: string }> => withLoading(request<{ success: boolean; message: string }>('/admin/test-email', {
+      method: 'POST',
+      body: JSON.stringify({ email })
     })),
   }
 };

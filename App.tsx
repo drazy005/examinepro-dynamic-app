@@ -98,10 +98,32 @@ const App: React.FC = () => {
   const handleTogglePublish = async (id: string, published: boolean) => {
     try {
       setExams(prev => prev.map(e => e.id === id ? { ...e, published } : e));
-      await api.exams.save({ ...exams.find(e => e.id === id)!, published });
-      addToast(`Exam ${published ? 'Published' : 'Hidden'}`, 'success');
+      // Use update instead of save for existing exams to prevent "status" errors
+      const currentExam = exams.find(e => e.id === id);
+      if (currentExam) {
+        await api.exams.update({ ...currentExam, published });
+        addToast(`Exam ${published ? 'Published' : 'Hidden'}`, 'success');
+      }
     } catch (e) {
       addToast('Failed to update status', 'error');
+    }
+  };
+
+  const handleStartExam = async (exam: Exam) => {
+    // Check if questions are loaded. If not, fetched them.
+    if (!exam.questions || exam.questions.length === 0) {
+      try {
+        const fullExam = await api.exams.get(exam.id);
+        if (fullExam && fullExam.questions && fullExam.questions.length > 0) {
+          setActiveExam(fullExam);
+        } else {
+          addToast("Error: Exam has no questions.", "error");
+        }
+      } catch (e) {
+        addToast("Failed to load exam details.", "error");
+      }
+    } else {
+      setActiveExam(exam);
     }
   };
 
@@ -152,12 +174,18 @@ const App: React.FC = () => {
 
   const [viewingSubmission, setViewingSubmission] = useState<{ sub: Submission, exam: Exam } | null>(null);
 
-  const handleViewDetails = (sub: Submission) => {
+  const handleViewDetails = async (sub: Submission) => {
     const exam = exams.find(e => e.id === sub.examId);
     if (exam) {
       setViewingSubmission({ sub, exam });
     } else {
-      addToast("Exam data not found for this submission.", "error");
+      // Exam not in local list (maybe hidden or deleted from cache). Try fetching.
+      try {
+        const fullExam = await api.exams.get(sub.examId);
+        setViewingSubmission({ sub, exam: fullExam });
+      } catch (e) {
+        addToast("Exam data not found (it may have been deleted).", "error");
+      }
     }
   };
 
@@ -219,7 +247,7 @@ const App: React.FC = () => {
       case UserRole.CANDIDATE:
         return <CandidatePortal
           announcements={announcements.filter(p => p.published)}
-          onTakeExam={e => setActiveExam(e)}
+          onTakeExam={handleStartExam}
           onViewDetails={handleViewDetails}
         />;
 
