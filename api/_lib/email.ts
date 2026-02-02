@@ -38,7 +38,7 @@ const getTransporter = async () => {
                     secure: dbConfig.secure,
                     auth: {
                         user: dbConfig.user,
-                        pass: dbConfig.pass,
+                        pass: dbConfig.pass ? dbConfig.pass.replace(/\s+/g, '') : '',
                     },
                 });
             }
@@ -56,7 +56,7 @@ const getTransporter = async () => {
             secure: ENV_SMTP.port === 465,
             auth: {
                 user: ENV_SMTP.user,
-                pass: ENV_SMTP.pass,
+                pass: ENV_SMTP.pass ? ENV_SMTP.pass.replace(/\s+/g, '') : '',
             },
         });
     }
