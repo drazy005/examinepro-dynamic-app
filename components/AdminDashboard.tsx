@@ -343,271 +343,272 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                   <button onClick={() => setCreatingQuestionType(QuestionType.THEORY)} className="bg-purple-600 text-white px-4 py-3 rounded-xl font-bold uppercase text-[10px]">+ Theory</button>
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 gap-6">
-                {/* Question Creator */}
-                {creatingQuestionType && (
-                  <div className="mb-8 animate-in slide-in-from-top-4 fade-in">
+            <div className="grid grid-cols-1 gap-6">
+              {/* Question Creator */}
+              {creatingQuestionType && (
+                <div className="mb-8 animate-in slide-in-from-top-4 fade-in">
+                  <QuestionEditor
+                    isNew={true}
+                    initialQuestion={{ type: creatingQuestionType }}
+                    onSave={async (q) => {
+                      await saveQuestion({ ...q, id: '', createdAt: Date.now() } as Question);
+                      setCreatingQuestionType(null); // Close creator on success
+                    }}
+                    onCancel={() => setCreatingQuestionType(null)}
+                  />
+                </div>
+              )}
+
+              {/* Existing Questions */}
+              <div className="flex items-center gap-2 mb-2 px-2">
+                <input type="checkbox" checked={filteredQuestions.length > 0 && selectedQuestionIds.size === filteredQuestions.length}
+                  onChange={() => {
+                    if (selectedQuestionIds.size === filteredQuestions.length) setSelectedQuestionIds(new Set());
+                    else setSelectedQuestionIds(new Set(filteredQuestions.map(q => q.id)));
+                  }} className="w-4 h-4 rounded text-indigo-600" />
+                <span className="text-xs font-bold text-slate-400 uppercase">Select All</span>
+              </div>
+              {filteredQuestions.map(q => (
+                <div key={q.id} className="flex gap-4 items-start">
+                  <div className="pt-4">
+                    <input type="checkbox" checked={selectedQuestionIds.has(q.id)}
+                      onChange={() => {
+                        const newSet = new Set(selectedQuestionIds);
+                        if (newSet.has(q.id)) newSet.delete(q.id); else newSet.add(q.id);
+                        setSelectedQuestionIds(newSet);
+                      }} className="w-4 h-4 rounded text-indigo-600" />
+                  </div>
+                  <div className="flex-1">
                     <QuestionEditor
-                      isNew={true}
-                      initialQuestion={{ type: creatingQuestionType }}
-                      onSave={async (q) => {
-                        await saveQuestion({ ...q, id: '', createdAt: Date.now() } as Question);
-                        setCreatingQuestionType(null); // Close creator on success
+                      key={q.id}
+                      initialQuestion={q}
+                      onSave={async (updated) => {
+                        await saveQuestion({ ...q, ...updated });
                       }}
-                      onCancel={() => setCreatingQuestionType(null)}
+                      onDelete={() => deleteQuestion(q.id)}
                     />
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'exams' && (
+        <div className="px-4 space-y-8">
+          {isCreating ? (
+            <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm animate-in zoom-in-95">
+              <h2 className="font-black text-2xl uppercase mb-6">Create New Exam</h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Exam Title</label>
+                  <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.title} onChange={e => setEditingExam({ ...editingExam, title: e.target.value })} placeholder="e.g. Final Anatomy Assessment" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Duration (Minutes)</label>
+                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.durationMinutes} onChange={e => setEditingExam({ ...editingExam, durationMinutes: parseInt(e.target.value) || 0 })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Pass Mark (%)</label>
+                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.passMark} onChange={e => setEditingExam({ ...editingExam, passMark: parseInt(e.target.value) || 0 })} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Scheduled Release (Optional)</label>
+                    <input
+                      type="datetime-local"
+                      className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm"
+                      // Simple approach: Use string value from/to local ISO without complex conversion if possible, or strip 'Z'
+                      // Best way: Use a string state for this input, but since we bind to editingExam.scheduledReleaseDate (Date object or string), we convert.
+                      value={editingExam.scheduledReleaseDate ?
+                        (typeof editingExam.scheduledReleaseDate === 'string'
+                          ? editingExam.scheduledReleaseDate.substring(0, 16)
+                          : new Date(editingExam.scheduledReleaseDate).toISOString().slice(0, 16))
+                        : ''}
+                      onChange={e => setEditingExam({ ...editingExam, scheduledReleaseDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Leave blank to publish immediately.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Warning Threshold (Min)</label>
+                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.timerSettings?.warningThresholdMinutes || 5} onChange={e => setEditingExam({ ...editingExam, timerSettings: { ...editingExam.timerSettings!, warningThresholdMinutes: parseInt(e.target.value) || 5 } })} />
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button onClick={() => setIsSelectingQuestions(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs shadow-md transition-all flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                    Select From Bank
+                  </button>
+                  <button onClick={() => setEditingExam({ ...editingExam, questions: [] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Clear All</button>
+                </div>
+
+                {isSelectingQuestions && (
+                  <QuestionSelector
+                    questions={questionBank}
+                    initialSelection={editingExam.questions?.map(q => q.id) || []}
+                    onClose={() => setIsSelectingQuestions(false)}
+                    onSelect={(selected) => {
+                      setEditingExam({ ...editingExam, questions: selected });
+                      setIsSelectingQuestions(false);
+                      addToast(`${selected.length} questions added to exam.`, 'success');
+                    }}
+                  />
                 )}
 
-                {/* Existing Questions */}
-                <div className="flex items-center gap-2 mb-2 px-2">
-                  <input type="checkbox" checked={filteredQuestions.length > 0 && selectedQuestionIds.size === filteredQuestions.length}
-                    onChange={() => {
-                      if (selectedQuestionIds.size === filteredQuestions.length) setSelectedQuestionIds(new Set());
-                      else setSelectedQuestionIds(new Set(filteredQuestions.map(q => q.id)));
-                    }} className="w-4 h-4 rounded text-indigo-600" />
-                  <span className="text-xs font-bold text-slate-400 uppercase">Select All</span>
+                <div className="bg-slate-50 dark:bg-slate-800 p-6 theme-rounded">
+                  <h3 className="font-bold uppercase text-xs text-slate-400 mb-4">Selected Questions ({editingExam.questions?.length})</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {editingExam.questions?.map((q, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded shadow-sm">
+                        <span className="text-sm font-medium truncate w-3/4">{q.text}</span>
+                        <button onClick={() => setEditingExam({ ...editingExam, questions: editingExam.questions?.filter((_, i) => i !== idx) })} className="text-red-500 text-xs font-bold uppercase">Remove</button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {filteredQuestions.map(q => (
-                  <div key={q.id} className="flex gap-4 items-start">
-                    <div className="pt-4">
-                      <input type="checkbox" checked={selectedQuestionIds.has(q.id)}
-                        onChange={() => {
-                          const newSet = new Set(selectedQuestionIds);
-                          if (newSet.has(q.id)) newSet.delete(q.id); else newSet.add(q.id);
-                          setSelectedQuestionIds(newSet);
-                        }} className="w-4 h-4 rounded text-indigo-600" />
+
+                <div className="flex justify-between gap-4 pt-4 border-t">
+                  <div className="flex gap-2">
+                    <button onClick={() => setIsCreating(false)} className="px-6 py-3 font-bold uppercase text-xs text-slate-500">Cancel</button>
+                    {/* Duplicate / Save as Copy Feature */}
+                    {editingExam.id && (
+                      <button onClick={async () => {
+                        const copy = { ...editingExam, id: undefined, title: `${editingExam.title} (Copy)`, published: false };
+                        setEditingExam(copy);
+                        // We just updated state, user can now Save as new.
+                        addToast('Exam duplicated. Click Save to create.', 'success');
+                      }} className="px-6 py-3 font-bold uppercase text-xs text-indigo-600">Save as Copy</button>
+                    )}
+                  </div>
+                  <button onClick={handleSave} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs shadow-lg">Save Exam</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+              <div className="flex justify-between mb-8">
+                <h2 className="font-black text-2xl uppercase">All Exams</h2>
+                <button onClick={() => { setEditingExam({ title: '', questions: [], category: 'General', difficulty: Difficulty.MEDIUM, durationMinutes: 30, passMark: 50, resultRelease: ResultRelease.INSTANT, timerSettings: defaultTimerSettings, gradingPolicy: defaultGradingPolicy, version: 1 }); setIsCreating(true); }} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs">+ Create Exam</button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {exams.map(exam => (
+                  <div key={exam.id} className="p-6 border rounded-2xl bg-slate-50 dark:bg-slate-800 hover:border-indigo-500 transition-colors group cursor-pointer" onClick={() => onPreviewExam(exam)}>
+                    <h3 className="font-bold text-lg mb-2">{exam.title}</h3>
+                    <div className="flex gap-2 text-[10px] font-black uppercase text-slate-400">
+                      <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.questions.length} Qs</span>
+                      <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.durationMinutes} m</span>
                     </div>
-                    <div className="flex-1">
-                      <QuestionEditor
-                        key={q.id}
-                        initialQuestion={q}
-                        onSave={async (updated) => {
-                          await saveQuestion({ ...q, ...updated });
-                        }}
-                        onDelete={() => deleteQuestion(q.id)}
-                      />
+                    <div className="mt-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-between items-center">
+                        <span className="text-indigo-600 text-xs font-bold uppercase">Actions</span>
+                        <div className="flex gap-2">
+                          <button onClick={(e) => {
+                            e.stopPropagation(); onTogglePublish(exam.id, !exam.published);
+                          }} className={`text-xs font-bold uppercase hover:underline z-10 ${exam.published ? 'text-slate-400' : 'text-green-600'}`}>{exam.published ? 'Hide' : 'Publish'}</button>
+
+                          <button onClick={(e) => {
+                            e.stopPropagation(); setEditingExam(exam); setIsCreating(true);
+                          }} className="text-indigo-600 text-xs font-bold uppercase hover:underline z-10">Edit</button>
+
+                          <button onClick={(e) => {
+                            e.stopPropagation(); onPreviewExam(exam);
+                          }} className="text-blue-600 text-xs font-bold uppercase hover:underline z-10">Preview</button>
+
+                          {/* Quick Duration Edit for Active Exams */}
+                          <button onClick={async (e) => {
+                            e.stopPropagation();
+                            const newTime = prompt("Enter new duration (minutes):", exam.durationMinutes.toString());
+                            if (newTime && !isNaN(parseInt(newTime))) {
+                              try {
+                                await fetch(`/api/exams/${exam.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ durationMinutes: parseInt(newTime) })
+                                });
+                                alert('Time added! Students will see update in < 30s.');
+                              } catch (e) { alert('Failed to add time'); }
+                            }
+                          }} className="text-emerald-600 text-xs font-bold uppercase hover:underline">Add Time</button>
+
+                          <button onClick={(e) => { e.stopPropagation(); onBulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          )}
+        </div>
       )}
 
-          {activeTab === 'exams' && (
-            <div className="px-4 space-y-8">
-              {isCreating ? (
-                <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm animate-in zoom-in-95">
-                  <h2 className="font-black text-2xl uppercase mb-6">Create New Exam</h2>
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Exam Title</label>
-                      <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.title} onChange={e => setEditingExam({ ...editingExam, title: e.target.value })} placeholder="e.g. Final Anatomy Assessment" />
-                    </div>
+      {activeTab === 'users' && (
+        <div className="px-4">
+          <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+            <h2 className="font-black text-2xl uppercase mb-8">Registered Users</h2>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b">
+                  <th className="pb-4">Name</th>
+                  <th className="pb-4">Email</th>
+                  <th className="pb-4">Role</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {users.map(u => (
+                  <tr key={u.id} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td className="py-4 font-bold">{u.name}</td>
+                    <td className="py-4 text-slate-500">{u.email}</td>
+                    <td className="py-4"><span className="bg-slate-100 px-2 py-1 rounded text-[10px] uppercase font-black">{u.role}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Duration (Minutes)</label>
-                        <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.durationMinutes} onChange={e => setEditingExam({ ...editingExam, durationMinutes: parseInt(e.target.value) || 0 })} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Pass Mark (%)</label>
-                        <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.passMark} onChange={e => setEditingExam({ ...editingExam, passMark: parseInt(e.target.value) || 0 })} />
-                      </div>
-                    </div>
+      {activeTab === 'analytics' && (
+        <AnalyticsDashboard exams={exams} submissions={submissions} users={users} />
+      )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Scheduled Release (Optional)</label>
-                        <input
-                          type="datetime-local"
-                          className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm"
-                          // Simple approach: Use string value from/to local ISO without complex conversion if possible, or strip 'Z'
-                          // Best way: Use a string state for this input, but since we bind to editingExam.scheduledReleaseDate (Date object or string), we convert.
-                          value={editingExam.scheduledReleaseDate ?
-                            (typeof editingExam.scheduledReleaseDate === 'string'
-                              ? editingExam.scheduledReleaseDate.substring(0, 16)
-                              : new Date(editingExam.scheduledReleaseDate).toISOString().slice(0, 16))
-                            : ''}
-                          onChange={e => setEditingExam({ ...editingExam, scheduledReleaseDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                        />
-                        <p className="text-[10px] text-slate-400 mt-1">Leave blank to publish immediately.</p>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Warning Threshold (Min)</label>
-                        <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.timerSettings?.warningThresholdMinutes || 5} onChange={e => setEditingExam({ ...editingExam, timerSettings: { ...editingExam.timerSettings!, warningThresholdMinutes: parseInt(e.target.value) || 5 } })} />
-                      </div>
-                    </div>
+      {selectedSubmission && (
+        <SubmissionDetailModal
+          submission={selectedSubmission.sub}
+          exam={selectedSubmission.exam}
+          onClose={() => setSelectedSubmission(null)}
+          systemSettings={systemSettings}
+          isAdmin={true}
+          onManualGrade={(qId, res) => {
+            // Adapt the call to the prop
+            if (selectedSubmission) {
+              onManualGrade(selectedSubmission.sub.id, qId, res);
+              // We don't manually update local state here anymore because the parent handles the definitive update
+              // and passes back the new submissions list.
+              setSelectedSubmission(null); // Close to refresh/avoid stale state or keep open handled by state? 
+              // Simple approach: Close modal on save.
+              addToast('Grade saved', 'success');
+            }
+          }}
+        />
+      )}
 
-                    <div className="flex gap-4">
-                      <button onClick={() => setIsSelectingQuestions(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs shadow-md transition-all flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        Select From Bank
-                      </button>
-                      <button onClick={() => setEditingExam({ ...editingExam, questions: [] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Clear All</button>
-                    </div>
-
-                    {isSelectingQuestions && (
-                      <QuestionSelector
-                        questions={questionBank}
-                        initialSelection={editingExam.questions?.map(q => q.id) || []}
-                        onClose={() => setIsSelectingQuestions(false)}
-                        onSelect={(selected) => {
-                          setEditingExam({ ...editingExam, questions: selected });
-                          setIsSelectingQuestions(false);
-                          addToast(`${selected.length} questions added to exam.`, 'success');
-                        }}
-                      />
-                    )}
-
-                    <div className="bg-slate-50 dark:bg-slate-800 p-6 theme-rounded">
-                      <h3 className="font-bold uppercase text-xs text-slate-400 mb-4">Selected Questions ({editingExam.questions?.length})</h3>
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {editingExam.questions?.map((q, idx) => (
-                          <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded shadow-sm">
-                            <span className="text-sm font-medium truncate w-3/4">{q.text}</span>
-                            <button onClick={() => setEditingExam({ ...editingExam, questions: editingExam.questions?.filter((_, i) => i !== idx) })} className="text-red-500 text-xs font-bold uppercase">Remove</button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between gap-4 pt-4 border-t">
-                      <div className="flex gap-2">
-                        <button onClick={() => setIsCreating(false)} className="px-6 py-3 font-bold uppercase text-xs text-slate-500">Cancel</button>
-                        {/* Duplicate / Save as Copy Feature */}
-                        {editingExam.id && (
-                          <button onClick={async () => {
-                            const copy = { ...editingExam, id: undefined, title: `${editingExam.title} (Copy)`, published: false };
-                            setEditingExam(copy);
-                            // We just updated state, user can now Save as new.
-                            addToast('Exam duplicated. Click Save to create.', 'success');
-                          }} className="px-6 py-3 font-bold uppercase text-xs text-indigo-600">Save as Copy</button>
-                        )}
-                      </div>
-                      <button onClick={handleSave} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs shadow-lg">Save Exam</button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
-                  <div className="flex justify-between mb-8">
-                    <h2 className="font-black text-2xl uppercase">All Exams</h2>
-                    <button onClick={() => { setEditingExam({ title: '', questions: [], category: 'General', difficulty: Difficulty.MEDIUM, durationMinutes: 30, passMark: 50, resultRelease: ResultRelease.INSTANT, timerSettings: defaultTimerSettings, gradingPolicy: defaultGradingPolicy, version: 1 }); setIsCreating(true); }} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs">+ Create Exam</button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {exams.map(exam => (
-                      <div key={exam.id} className="p-6 border rounded-2xl bg-slate-50 dark:bg-slate-800 hover:border-indigo-500 transition-colors group cursor-pointer" onClick={() => onPreviewExam(exam)}>
-                        <h3 className="font-bold text-lg mb-2">{exam.title}</h3>
-                        <div className="flex gap-2 text-[10px] font-black uppercase text-slate-400">
-                          <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.questions.length} Qs</span>
-                          <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.durationMinutes} m</span>
-                        </div>
-                        <div className="mt-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="flex justify-between items-center">
-                            <span className="text-indigo-600 text-xs font-bold uppercase">Actions</span>
-                            <div className="flex gap-2">
-                              <button onClick={(e) => {
-                                e.stopPropagation(); onTogglePublish(exam.id, !exam.published);
-                              }} className={`text-xs font-bold uppercase hover:underline z-10 ${exam.published ? 'text-slate-400' : 'text-green-600'}`}>{exam.published ? 'Hide' : 'Publish'}</button>
-
-                              <button onClick={(e) => {
-                                e.stopPropagation(); setEditingExam(exam); setIsCreating(true);
-                              }} className="text-indigo-600 text-xs font-bold uppercase hover:underline z-10">Edit</button>
-
-                              <button onClick={(e) => {
-                                e.stopPropagation(); onPreviewExam(exam);
-                              }} className="text-blue-600 text-xs font-bold uppercase hover:underline z-10">Preview</button>
-
-                              {/* Quick Duration Edit for Active Exams */}
-                              <button onClick={async (e) => {
-                                e.stopPropagation();
-                                const newTime = prompt("Enter new duration (minutes):", exam.durationMinutes.toString());
-                                if (newTime && !isNaN(parseInt(newTime))) {
-                                  try {
-                                    await fetch(`/api/exams/${exam.id}`, {
-                                      method: 'PUT',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ durationMinutes: parseInt(newTime) })
-                                    });
-                                    alert('Time added! Students will see update in < 30s.');
-                                  } catch (e) { alert('Failed to add time'); }
-                                }
-                              }} className="text-emerald-600 text-xs font-bold uppercase hover:underline">Add Time</button>
-
-                              <button onClick={(e) => { e.stopPropagation(); onBulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'users' && (
-            <div className="px-4">
-              <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
-                <h2 className="font-black text-2xl uppercase mb-8">Registered Users</h2>
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b">
-                      <th className="pb-4">Name</th>
-                      <th className="pb-4">Email</th>
-                      <th className="pb-4">Role</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm">
-                    {users.map(u => (
-                      <tr key={u.id} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="py-4 font-bold">{u.name}</td>
-                        <td className="py-4 text-slate-500">{u.email}</td>
-                        <td className="py-4"><span className="bg-slate-100 px-2 py-1 rounded text-[10px] uppercase font-black">{u.role}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'analytics' && (
-            <AnalyticsDashboard exams={exams} submissions={submissions} users={users} />
-          )}
-
-          {selectedSubmission && (
-            <SubmissionDetailModal
-              submission={selectedSubmission.sub}
-              exam={selectedSubmission.exam}
-              onClose={() => setSelectedSubmission(null)}
-              systemSettings={systemSettings}
-              isAdmin={true}
-              onManualGrade={(qId, res) => {
-                // Adapt the call to the prop
-                if (selectedSubmission) {
-                  onManualGrade(selectedSubmission.sub.id, qId, res);
-                  // We don't manually update local state here anymore because the parent handles the definitive update
-                  // and passes back the new submissions list.
-                  setSelectedSubmission(null); // Close to refresh/avoid stale state or keep open handled by state? 
-                  // Simple approach: Close modal on save.
-                  addToast('Grade saved', 'success');
-                }
-              }}
-            />
-          )}
-
-          {isImporting && (
-            <BulkImportModal
-              onImport={handleBatchImport}
-              onClose={() => setIsImporting(false)}
-            />
-          )}
-        </div >
-      );
+      {isImporting && (
+        <BulkImportModal
+          onImport={handleBatchImport}
+          onClose={() => setIsImporting(false)}
+        />
+      )}
+    </div >
+  );
 });
 
-      export default AdminDashboard;
+export default AdminDashboard;
