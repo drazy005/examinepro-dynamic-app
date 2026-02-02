@@ -26,6 +26,8 @@ const App: React.FC = () => {
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
   const [isAdminPreview, setIsAdminPreview] = useState(false);
   const [announcements, setAnnouncements] = useState<BlogPost[]>([]);
+  const [candidateTab, setCandidateTab] = useState<'available' | 'history'>('available');
+  const [superAdminViewKey, setSuperAdminViewKey] = useState(0);
 
   // Local admin states
   const [templates, setTemplates] = useState<ExamTemplate[]>([]);
@@ -70,6 +72,32 @@ const App: React.FC = () => {
     }
   }, [user, refreshQuestions]);
 
+  const handleBulkDeleteQuestions = async (ids: string[]) => {
+    try {
+      await fetch('/api/questions/batch', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      refreshQuestions();
+      addToast('Questions deleted', 'success');
+    } catch (e) {
+      addToast('Failed to delete questions', 'error');
+    }
+  };
+
+  const handlePurgeQuestions = async (type: string) => {
+    try {
+      await fetch(`/api/questions?mode=purge&type=${type || 'ALL'}`, {
+        method: 'DELETE'
+      });
+      refreshQuestions();
+      addToast('Question bank purged', 'success');
+    } catch (e) {
+      addToast('Failed to purge questions', 'error');
+    }
+  };
+
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser);
     api.admin.getAnnouncements().then(setAnnouncements);
@@ -113,6 +141,8 @@ const App: React.FC = () => {
   const handleDashboardClick = () => {
     setActiveExam(null); // Exit exam / return to list
     setIsAdminPreview(false);
+    setCandidateTab('available'); // Reset candidate tab
+    setSuperAdminViewKey(prev => prev + 1); // Reset SuperAdmin view
   };
 
 
@@ -210,6 +240,7 @@ const App: React.FC = () => {
     switch (user?.role) {
       case UserRole.SUPERADMIN:
         return <SuperAdminDashboard
+          key={superAdminViewKey}
           dbConfigs={dbConfigs}
           announcements={announcements}
           onUpdateAnnouncements={handleAnnouncementUpdate}
@@ -249,6 +280,8 @@ const App: React.FC = () => {
 
           onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); }}
           onTogglePublish={handleTogglePublish}
+          onBulkDeleteQuestions={handleBulkDeleteQuestions}
+          onPurgeQuestions={handlePurgeQuestions}
         />;
 
       case UserRole.CANDIDATE:
@@ -256,6 +289,8 @@ const App: React.FC = () => {
           announcements={announcements.filter(p => p.published)}
           onTakeExam={handleStartExam}
           onViewDetails={handleViewDetails}
+          activeTab={candidateTab}
+          onTabChange={setCandidateTab}
         />;
 
       default:
@@ -296,7 +331,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <Layout user={user} onLogout={handleLogout} isDarkMode={isDarkMode} onToggleDarkMode={toggleDarkMode} branding={branding} onDashboardClick={handleDashboardClick}>
+    <Layout user={user} onLogout={handleLogout} isDarkMode={isDarkMode} onToggleDarkMode={toggleDarkMode} branding={branding} onDashboardClick={handleDashboardClick} onMyExamsClick={() => setCandidateTab('history')}>
       {renderContent()}
       {viewingSubmission && (
         <SubmissionDetailModal

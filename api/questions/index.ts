@@ -16,10 +16,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // DELETE: Delete Question
+    // DELETE: Delete Question or Purge
     if (req.method === 'DELETE') {
-        const { id } = req.query;
-        if (!id || Array.isArray(id)) return res.status(400).json({ error: 'Invalid ID' });
+        const { id, mode, type } = req.query;
+
+        // Global/Filtered Purge
+        if (mode === 'purge') {
+            const whereClause: any = {};
+            if (type && type !== 'ALL') {
+                whereClause.type = type;
+            }
+            const result = await db.question.deleteMany({ where: whereClause });
+            return res.status(200).json({ success: true, count: result.count });
+        }
+
+        // Single Delete
+        if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Invalid ID' });
 
         await db.question.delete({ where: { id } });
         return res.status(200).json({ success: true });

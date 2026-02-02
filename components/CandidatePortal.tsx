@@ -7,12 +7,13 @@ interface CandidatePortalProps {
     announcements: BlogPost[];
     onTakeExam: (exam: Exam) => void;
     onViewDetails: (sub: Submission) => void;
+    activeTab: 'available' | 'history';
+    onTabChange: (tab: 'available' | 'history') => void;
 }
 
-const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTakeExam, onViewDetails }) => {
+const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTakeExam, onViewDetails, activeTab, onTabChange }) => {
     const [availableExams, setAvailableExams] = useState<Exam[]>([]);
     const [history, setHistory] = useState<Submission[]>([]);
-    const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
 
     useEffect(() => {
         loadData();
@@ -56,13 +57,13 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
             {/* Tabs */}
             <div className="flex space-x-4 border-b border-slate-200 dark:border-slate-700">
                 <button
-                    onClick={() => setActiveTab('available')}
+                    onClick={() => onTabChange('available')}
                     className={`pb-2 px-4 ${activeTab === 'available' ? 'border-b-2 border-indigo-600 text-indigo-600 font-bold' : 'text-slate-500'}`}
                 >
                     Available Exams
                 </button>
                 <button
-                    onClick={() => setActiveTab('history')}
+                    onClick={() => onTabChange('history')}
                     className={`pb-2 px-4 ${activeTab === 'history' ? 'border-b-2 border-indigo-600 text-indigo-600 font-bold' : 'text-slate-500'}`}
                 >
                     Exam History

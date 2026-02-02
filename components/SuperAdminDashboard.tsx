@@ -199,7 +199,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                     const newSettings = { ...settings, aiGradingEnabled: !settings.aiGradingEnabled };
                     setSettings(newSettings); // Local update
                     try {
-                      await api.admin.updateSettings(newSettings); // Server sync
+                      await api.admin.updateSettings({ aiGradingEnabled: newSettings.aiGradingEnabled }); // Server sync partial
                       addToast('Settings saved', 'success');
                     } catch {
                       addToast('Failed to save settings', 'error');

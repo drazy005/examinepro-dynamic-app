@@ -5,7 +5,7 @@ import { parse } from 'cookie';
 
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    if (req.method !== 'POST' && req.method !== 'DELETE') return res.status(405).json({ error: 'Method not allowed' });
 
     // Auth Check
     const cookies = parse(req.headers.cookie || '');
@@ -18,6 +18,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        // DELETE BATCH
+        if (req.method === 'DELETE') {
+            const { ids } = req.body;
+            if (!ids || !Array.isArray(ids)) {
+                return res.status(400).json({ error: 'Invalid payload: Expected { ids: string[] }' });
+            }
+            const result = await db.question.deleteMany({
+                where: { id: { in: ids } }
+            });
+            return res.status(200).json({ success: true, count: result.count });
+        }
+
+        // POST IMPORT
         const questions = req.body;
         if (!Array.isArray(questions) || questions.length === 0) {
             return res.status(400).json({ error: 'Invalid payload: Expected array of questions' });
@@ -47,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ success: true, count: result.count });
 
     } catch (error: any) {
-        console.error('Batch import error:', error);
+        console.error('Batch error:', error);
         return res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 }

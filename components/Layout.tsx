@@ -12,9 +12,10 @@ interface LayoutProps {
   onToggleDarkMode: () => void;
   branding: AppBranding;
   onDashboardClick?: () => void;
+  onMyExamsClick?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, isDarkMode, onToggleDarkMode, branding, onDashboardClick }) => {
+const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, isDarkMode, onToggleDarkMode, branding, onDashboardClick, onMyExamsClick }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -95,7 +96,7 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, isDarkMode, o
               {/* Global Navigation Menu */}
               <nav className="hidden md:flex gap-6">
                 <button onClick={(e) => { e.preventDefault(); if (onDashboardClick) onDashboardClick(); }} className="text-xs font-bold uppercase text-white/80 hover:text-white tracking-widest">Dashboard</button>
-                {user?.role === 'CANDIDATE' && <button className="text-xs font-bold uppercase text-white/80 hover:text-white tracking-widest">My Exams</button>}
+                {user?.role === 'CANDIDATE' && <button onClick={(e) => { e.preventDefault(); if (onMyExamsClick) onMyExamsClick(); }} className="text-xs font-bold uppercase text-white/80 hover:text-white tracking-widest">My Exams</button>}
               </nav>
             </div>
 
