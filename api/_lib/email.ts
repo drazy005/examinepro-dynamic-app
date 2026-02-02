@@ -29,15 +29,19 @@ const getTransporter = async () => {
         const settingsRecord = await db.systemSettings.findUnique({ where: { key: 'smtpConfig' } });
         if (settingsRecord && settingsRecord.value) {
             const dbConfig: LocalSmtpConfig = JSON.parse(settingsRecord.value);
-            return nodemailer.createTransport({
-                host: dbConfig.host,
-                port: dbConfig.port,
-                secure: dbConfig.secure,
-                auth: {
-                    user: dbConfig.user,
-                    pass: dbConfig.pass,
-                },
-            });
+            // Only use DB config if it has at least a host defined
+            if (dbConfig.host && dbConfig.host.trim() !== '') {
+                console.log('Using SMTP Config from Database');
+                return nodemailer.createTransport({
+                    host: dbConfig.host,
+                    port: dbConfig.port,
+                    secure: dbConfig.secure,
+                    auth: {
+                        user: dbConfig.user,
+                        pass: dbConfig.pass,
+                    },
+                });
+            }
         }
     } catch (e) {
         console.warn('Failed to load SMTP config from DB, falling back to ENV.', e);
@@ -45,6 +49,7 @@ const getTransporter = async () => {
 
     // 2. Fallback to ENV
     if (ENV_SMTP.host) {
+        console.log('Using SMTP Config from Environment Variables');
         return nodemailer.createTransport({
             host: ENV_SMTP.host,
             port: ENV_SMTP.port,
@@ -56,6 +61,7 @@ const getTransporter = async () => {
         });
     }
 
+    console.warn('No SMTP configuration found (DB or ENV).');
     return null;
 };
 
@@ -64,7 +70,9 @@ const getFromAddress = async () => {
         const settingsRecord = await db.systemSettings.findUnique({ where: { key: 'smtpConfig' } });
         if (settingsRecord && settingsRecord.value) {
             const conf = JSON.parse(settingsRecord.value) as LocalSmtpConfig;
-            return `"${conf.fromName}" <${conf.fromEmail}>`;
+            if (conf.fromEmail && conf.fromEmail.trim() !== '') {
+                return `"${conf.fromName || 'ExaminePro'}" <${conf.fromEmail}>`;
+            }
         }
     } catch { }
     return ENV_SMTP.from;
@@ -120,7 +128,7 @@ export const emailLib = {
 
     sendBroadcastEmail: async (to: string, subject: string, htmlContent: string) => {
         const mailer = await getTransporter();
-        if (!mailer) return false;
+        if (!mailer) throw new Error("SMTP Configuration missing.");
 
         const from = await getFromAddress();
         try {
@@ -131,9 +139,9 @@ export const emailLib = {
                 html: htmlContent
             });
             return true;
-        } catch (e) {
+        } catch (e: any) {
             console.error('Failed to send broadcast:', e);
-            return false;
+            throw new Error(e.message || "Result: Failed to send email");
         }
     }
 };

@@ -142,10 +142,13 @@ async function handleBroadcast(req: VercelRequest, res: VercelResponse, user: an
     }
 
     try {
+        console.log(`Broadcast Target: ${targetRole}, Clause:`, whereClause);
         const recipients = await db.user.findMany({
             where: whereClause,
             select: { email: true, name: true }
         });
+
+        console.log(`Found ${recipients.length} recipients`);
 
         if (recipients.length === 0) {
             return res.status(200).json({ success: true, count: 0, message: 'No recipients found' });
@@ -155,24 +158,27 @@ async function handleBroadcast(req: VercelRequest, res: VercelResponse, user: an
         const limitedRecipients = recipients.slice(0, 50);
 
         let sentCount = 0;
-        const promises = limitedRecipients.map(async (u) => {
+        // Use sequential processing to avoid rate limits or overwhelming SMTP
+        for (const u of limitedRecipients) {
             const html = `
-                <div style="font-family: sans-serif; padding: 20px;">
-                    <p>Hello ${u.name},</p>
-                    <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #4f46e5; background: #f9fafb;">
-                        ${message.replace(/\n/g, '<br/>')}
+                    <div style="font-family: sans-serif; padding: 20px;">
+                        <p>Hello ${u.name},</p>
+                        <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #4f46e5; background: #f9fafb;">
+                            ${message.replace(/\n/g, '<br/>')}
+                        </div>
+                        <p style="font-size: 12px; color: #999;">You received this email as a registered user of ExaminePro.</p>
                     </div>
-                    <p style="font-size: 12px; color: #999;">You received this email as a registered user of ExaminePro.</p>
-                </div>
-            `;
-            const success = await emailLib.sendBroadcastEmail(u.email, subject, html);
-            if (success) sentCount++;
-        });
-
-        await Promise.all(promises);
+                `;
+            try {
+                await emailLib.sendBroadcastEmail(u.email, subject, html);
+                sentCount++;
+            } catch (err: any) {
+                console.error(`Failed to send to ${u.email}:`, err.message);
+            }
+        }
 
         return res.status(200).json({
-            success: true,
+            success: sentCount > 0,
             sent: sentCount,
             total: recipients.length,
             overflow: recipients.length > 50 ? 'Limited to 50 for safety' : undefined
@@ -193,13 +199,9 @@ async function handleTestEmail(req: VercelRequest, res: VercelResponse, user: an
 
     try {
         await emailLib.sendBroadcastEmail(email, 'ExaminePro SMTP Test', '<h1>SMTP Configured Successfully</h1><p>Your email system is working.</p>');
-        // Note: sendBroadcastEmail returns true/false but catches errors locally. 
-        // Ideally we should have a raw send in emailLib that throws errors to see the stack.
-        // For now, we assume if it returns, it's ok, but sendBroadcastEmail logic swallows.
-        // Let's rely on it. A better test would be a raw nodemailer call here, but reusing lib is cleaner.
-
         return res.status(200).json({ success: true, message: 'Test email sent to ' + email });
     } catch (e: any) {
-        return res.status(500).json({ error: 'Test failed: ' + e.message });
+        console.error("Test email failed:", e);
+        return res.status(500).json({ success: false, error: 'Test failed: ' + e.message });
     }
 }

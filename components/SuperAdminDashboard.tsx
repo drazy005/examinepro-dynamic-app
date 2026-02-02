@@ -492,21 +492,39 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
 
                     try {
                       // We save first to ensure we test current config
+                      // If fields are empty, we save them as empty (clearing DB config)
                       await updateSettings({ smtpConfig: settings.smtpConfig });
                       const res = await api.admin.testEmail(dest);
-                      addToast(res.message, 'success');
-                      // TODO: Modal? User asked for modal. Toast with message is success.
-                      // Let's Alert for now or fancy modal if time.
-                      alert(`Validation Response:\nSuccess: ${res.success}\nMessage: ${res.message}`);
-                    } catch (e) {
+
+                      if (res.success) {
+                        addToast(res.message, 'success');
+                        alert(`Success! Email Sent.\n${res.message}`);
+                      } else {
+                        addToast('Failed to send', 'error');
+                        alert(`Error:\n${res.error || 'Unknown error'}`);
+                      }
+                    } catch (e: any) {
                       addToast('Connection Test Failed', 'error');
-                      alert('Connection Failed. Check console/network logs.');
+                      alert('Connection Failed: ' + (e.message || 'Unknown Error'));
                     }
                   }} className="bg-slate-800 text-white px-6 py-3 rounded-lg font-bold uppercase text-xs">Test Connection</button>
                 </div>
-                {!isEmailConfigValid && <div className="text-red-500 text-xs font-bold text-center">Please fill all fields to enable saving.</div>}
 
-                <button disabled={!isEmailConfigValid} onClick={async () => {
+                <div className="flex justify-between items-center bg-indigo-50 dark:bg-slate-800 p-4 rounded-lg">
+                  <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">Environment Fallback</span>
+                  <button
+                    onClick={() => setSettings({
+                      ...settings,
+                      smtpConfig: { host: '', port: 587, user: '', pass: '', fromName: '', fromEmail: '', secure: false }
+                    })}
+                    className="text-xs font-black uppercase text-indigo-600 hover:underline"
+                  >
+                    Use .env Defaults (Clear All)
+                  </button>
+                </div>
+                {!isEmailConfigValid && <div className="text-slate-400 text-[10px] font-bold text-center">Empty fields will use server environment variables if available.</div>}
+
+                <button onClick={async () => {
                   setSaveModal({ show: true, status: 'processing', message: 'Verifying and Saving Configuration...' });
                   try {
                     await updateSettings({ smtpConfig: settings.smtpConfig });
@@ -515,7 +533,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                   } catch (e) {
                     setSaveModal({ show: true, status: 'error', message: 'Failed to save configuration.' });
                   }
-                }} className={`w-full py-3 text-white font-bold uppercase rounded-lg transition-colors ${!isEmailConfigValid ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>Save Config</button>
+                }} className="w-full py-3 text-white font-bold uppercase rounded-lg transition-colors bg-indigo-600 hover:bg-indigo-700">Save Config</button>
               </div>
 
               {/* BROADCAST */}

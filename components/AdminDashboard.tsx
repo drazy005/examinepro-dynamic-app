@@ -577,7 +577,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
       )}
 
       {activeTab === 'analytics' && (
-        <AnalyticsDashboard exams={exams} submissions={submissions} users={users} />
+        <AnalyticsDashboard
+          exams={exams}
+          submissions={submissions}
+          users={users}
+          onPreviewExam={onPreviewExam}
+          onViewSubmission={(sub, exam) => setSelectedSubmission({ sub, exam })}
+        />
       )}
 
       {selectedSubmission && (
