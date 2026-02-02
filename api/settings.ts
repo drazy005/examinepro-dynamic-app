@@ -62,11 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const updates: Record<string, any> = req.body;
 
         // Validation for sensitive configs
+        // Relaxed validation: Allow empty/partial config to support ENV fallback
         if (updates.smtpConfig) {
-            const smtp = typeof updates.smtpConfig === 'string' ? JSON.parse(updates.smtpConfig) : updates.smtpConfig;
-            if (!smtp.host || !smtp.user || !smtp.pass || !smtp.fromEmail) {
-                return res.status(400).json({ error: 'Invalid SMTP Config: Missing fields' });
-            }
+            // We allow saving whatever is passed. If it's invalid, the emailLib will just fallback or fail at runtime.
+            // This supports the "Use .env Defaults" feature where we clear the DB config.
         }
 
         const prismaPromises = Object.entries(updates).map(([key, value]) => {
