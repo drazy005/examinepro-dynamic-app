@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, memo } from 'react';
-import { Exam, QuestionType, ResultRelease, Question, Submission, TimerSettings, ExamTemplate, GradingPolicy, Difficulty, SystemSettings, QuestionResult, UserRole } from '../services/types';
+import { User, Exam, QuestionType, ResultRelease, Question, Submission, TimerSettings, ExamTemplate, GradingPolicy, Difficulty, SystemSettings, QuestionResult, UserRole } from '../services/types';
 import { v4 as uuidv4 } from 'uuid';
 import SubmissionDetailModal from './SubmissionDetailModal';
 import BulkImportModal from './BulkImportModal';
@@ -17,30 +17,67 @@ import QuestionSelector from './QuestionSelector';
 import AnalyticsDashboard from './AnalyticsDashboard';
 
 interface AdminDashboardProps {
+  exams: Exam[];
+  submissions: Submission[];
+  users: User[];
   templates: ExamTemplate[];
-  onSaveTemplate?: (template: ExamTemplate) => void;
-  onDeleteTemplate?: (id: string) => void;
+  systemSettings: SystemSettings;
+
+  // Exam Actions
+  onSaveExam: (exam: Exam) => Promise<any>;
+  onDeleteExam: (id: string) => void;
+  onBulkDeleteExams: (ids: string[]) => void;
+  onTogglePublish: (id: string, published: boolean) => void;
+  onPreviewExam: (exam: Exam) => void;
+
+  // Submission Actions
+  onBulkDeleteSubmissions: (ids: string[]) => void;
+  onManualGrade: (submissionId: string, questionId: string, result: QuestionResult) => void;
+  onReleaseResults: (examId: string) => void;
+  onReleaseSingleSubmission: (id: string) => void;
+  onReleaseAllDelayedResults: () => void;
+  onAIGradeSubmission: (id: string) => Promise<void>;
+
+  // Bank Actions
   questionBank: Question[];
   onAddToBank?: (question: Question) => void;
   onUpdateBankQuestion?: (id: string, updated: Question) => void;
   onDeleteFromBank?: (id: string) => void;
-  onPreviewExam: (exam: Exam) => void;
-  onTogglePublish: (id: string, published: boolean) => void;
+
+  // Template Actions
+  onSaveTemplate?: (template: ExamTemplate) => void;
+  onDeleteTemplate?: (id: string) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
-  onPreviewExam,
+  exams,
+  submissions,
+  users,
+  questionBank,
+  onSaveExam,
+  onDeleteExam,
+  onBulkDeleteExams,
+  onBulkDeleteSubmissions,
   onTogglePublish,
+  onPreviewExam,
+  onManualGrade,
+  onReleaseAllDelayedResults,
+  onReleaseResults,
+  onReleaseSingleSubmission,
+  onAddToBank,
+  onUpdateBankQuestion,
+  onDeleteFromBank,
 }) => {
   const { settings: systemSettings } = useSystem();
   const { addToast } = useToast();
 
-  // Data managed by custom hooks
-  const { exams, saveExam, bulkDeleteExams } = useExams();
-  const { submissions, setSubmissions, updateSubmission, bulkDeleteSubmissions } = useSubmissions();
+  const { questions: unusedQuestions, saveQuestion, deleteQuestion } = useQuestions(); // Keep for internal bank management if needed, but actions are passed now. 
+  // actually onAddToBank is passed, so we should use that. 
+  // But wait, the component uses saveQuestion/deleteQuestion internally for the QuestionEditor.
+  // We should prob use the passed props for those too if available, or keep the hook for BANK management if it's creating questions directly.
+  // The prompt says "questionBank" is passed. 
 
-  const { users } = useUsers();
-  const { questions: questionBank, saveQuestion, deleteQuestion } = useQuestions();
+  // We will trust the passed props for main data to ensure sync.
 
   const [activeTab, setActiveTab] = useState<'exams' | 'submissions' | 'users' | 'questions' | 'analytics'>('exams');
   const [isCreating, setIsCreating] = useState(false);
@@ -117,36 +154,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
     version: 1
   });
 
-  const handleAIGradeSubmission = async (submissionId: string) => {
-    // This logic would need to be moved to a hook or stay here,
-    // for now it's simplified as it's a complex operation.
-    addToast('AI Re-grading is a complex operation, simplified in this refactor.', 'info');
-  };
+  // Internal implementations removed, using props.
 
-  const onManualGrade = (submissionId: string, questionId: string, result: QuestionResult) => {
-    // This logic would also be part of the submissions hook
-    addToast('Manual grading is a complex operation, simplified in this refactor.', 'info');
-  };
-
-  const onReleaseAllDelayedResults = async () => {
-    try {
-      const updatedSubs = await Promise.all(
-        submissions
-          .filter(s => !s.resultsReleased && exams.find(e => e.id === s.examId)?.resultRelease === ResultRelease.DELAYED)
-          .map(s => updateSubmission({ ...s, resultsReleased: true }))
-      );
-      setSubmissions(prev => prev.map(s => updatedSubs.find(u => u?.id === s.id) || s));
-      addToast('Delayed results have been released.', 'success');
-    } catch (e) {
-      addToast('Failed to release delayed results.', 'error');
-    }
-  };
-
-
-  const handleAiBuild = async () => {
-    // Non-AI preference: Feature disabled.
-    addToast('AI Generation is currently disabled by system policy.', 'info');
-  };
 
   const handleSave = async () => {
     if (!editingExam.title || !editingExam.questions?.length) {
@@ -162,7 +171,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
       version: (editingExam.version || 0) + 1,
       createdAt: editingExam.createdAt || Date.now()
     } as Exam;
-    await saveExam(securedExam);
+    await onSaveExam(securedExam);
     setIsCreating(false);
   };
 
@@ -204,7 +213,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
             <input type="text" placeholder="Search transcripts..." value={submissionFilter} onChange={e => setSubmissionFilter(e.target.value)} className="w-full md:max-w-md bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl font-black text-xs uppercase" />
             <div className="flex gap-4">
               {selectedSubIds.size > 0 && (
-                <button onClick={() => { bulkDeleteSubmissions(Array.from(selectedSubIds)); setSelectedSubIds(new Set()); }} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg">Delete ({selectedSubIds.size})</button>
+                <button onClick={() => { onBulkDeleteSubmissions(Array.from(selectedSubIds)); setSelectedSubIds(new Set()); }} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg">Delete ({selectedSubIds.size})</button>
               )}
               <button onClick={onReleaseAllDelayedResults} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase">Release Delayed</button>
             </div>
@@ -478,7 +487,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                             }
                           }} className="text-emerald-600 text-xs font-bold uppercase hover:underline">Add Time</button>
 
-                          <button onClick={(e) => { e.stopPropagation(); bulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
+                          <button onClick={(e) => { e.stopPropagation(); onBulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
                         </div>
                       </div>
                     </div>
@@ -528,12 +537,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
           systemSettings={systemSettings}
           isAdmin={true}
           onManualGrade={(qId, res) => {
-            // In a real app we would call an API here. For now we just update local state.
-            const updatedResults = { ...selectedSubmission.sub.questionResults, [qId]: res };
-            const newScore = Object.values(updatedResults).reduce((acc, r: any) => acc + (r.score || 0), 0); // Simplified score recalc
-            updateSubmission({ ...selectedSubmission.sub, questionResults: updatedResults, score: newScore });
-            setSelectedSubmission({ ...selectedSubmission, sub: { ...selectedSubmission.sub, questionResults: updatedResults, score: newScore } });
-            addToast('Grade saved', 'success');
+            // Adapt the call to the prop
+            if (selectedSubmission) {
+              onManualGrade(selectedSubmission.sub.id, qId, res);
+              // We don't manually update local state here anymore because the parent handles the definitive update
+              // and passes back the new submissions list.
+              setSelectedSubmission(null); // Close to refresh/avoid stale state or keep open handled by state? 
+              // Simple approach: Close modal on save.
+              addToast('Grade saved', 'success');
+            }
           }}
         />
       )}

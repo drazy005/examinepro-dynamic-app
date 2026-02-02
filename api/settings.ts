@@ -82,8 +82,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
             await db.$transaction(prismaPromises);
             return res.status(200).json({ success: true });
-        } catch (error) {
-            return res.status(500).json({ error: 'Failed to update settings' });
+        } catch (error: any) {
+            console.error("Settings Update Error:", error);
+            // Check for specific Prisma errors if possible, or just return the message
+            return res.status(500).json({ error: `Failed to update settings: ${error.message || 'Unknown DB Error'}` });
         }
     }
 
