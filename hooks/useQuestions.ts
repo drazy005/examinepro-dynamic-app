@@ -18,9 +18,11 @@ export const useQuestions = () => {
         }
     }, [addToast]);
 
-    useEffect(() => {
-        fetchQuestions();
-    }, [fetchQuestions]);
+    // Removed auto-fetch to prevent 401 race condition. 
+    // App.tsx handles the initial fetch when user is authenticated.
+    // useEffect(() => {
+    //    fetchQuestions();
+    // }, [fetchQuestions]);
 
     const saveQuestion = async (question: Question) => {
         try {

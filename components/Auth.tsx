@@ -11,7 +11,7 @@ interface AuthProps {
 
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const { branding, isDarkMode } = useSystem();
-  const [authView, setAuthView] = useState<'login' | 'register' | 'forgot' | 'verify_sent' | 'reset_sent'>('login');
+  const [authView, setAuthView] = useState<'login' | 'register' | 'forgot' | 'verify_sent' | 'reset_sent' | 'reset_password'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');

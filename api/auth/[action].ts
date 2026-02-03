@@ -19,6 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'register': return await handleRegister(req, res);
             case 'me': return await handleMe(req, res);
             case 'forgot': return await handleForgot(req, res);
+            case 'reset': return await handleReset(req, res);
             case 'logout': return await handleLogout(req, res);
             default: return res.status(404).json({ error: 'Endpoint not found' });
         }
@@ -53,6 +54,40 @@ async function handleForgot(req: VercelRequest, res: VercelResponse) {
 
     // Always return success to prevent email enumeration
     return res.status(200).json({ message: 'If email exists, reset link sent' });
+}
+
+async function handleReset(req: VercelRequest, res: VercelResponse) {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token and password required' });
+
+    // Find user with valid token and expiry
+    const users = await db.user.findMany({
+        where: {
+            resetToken: token,
+            // resetTokenExpiry: { gt: new Date() } // Prisma doesn't support 'gt' on Date field directly in every provider version cleanly without strict typing, but let's try or filter in JS
+        }
+    });
+
+    const user = users.find(u => u.resetTokenExpiry && u.resetTokenExpiry > new Date());
+
+    if (!user) {
+        return res.status(400).json({ error: 'Invalid or expired token' });
+    }
+
+    const passwordHash = await authLib.hashPassword(newPassword);
+
+    await db.user.update({
+        where: { id: user.id },
+        data: {
+            passwordHash,
+            resetToken: null,
+            resetTokenExpiry: null
+        } as any
+    });
+
+    return res.status(200).json({ success: true, message: 'Password updated successfully' });
 }
 
 async function handleLogin(req: VercelRequest, res: VercelResponse) {
