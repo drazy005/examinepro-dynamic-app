@@ -305,6 +305,20 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                   </span>
                 </div>
               </div>
+
+              <button
+                onClick={async () => {
+                  try {
+                    await api.admin.updateSettings({ branding });
+                    addToast('Appearance Saved Globally', 'success');
+                  } catch (e) {
+                    addToast('Failed to save appearance', 'error');
+                  }
+                }}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase rounded-xl transition-all shadow-lg active:scale-95"
+              >
+                Save Appearance
+              </button>
             </div>
           </div>
         )}
@@ -501,7 +515,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                         alert(`Success! Email Sent.\n${res.message}`);
                       } else {
                         addToast('Failed to send', 'error');
-                        alert(`Error:\n${res.error || 'Unknown error'}`);
+                        // Use explicit cast or safe access
+                        alert(`Error:\n${(res as any).error || res.message || 'Unknown error'}`);
                       }
                     } catch (e: any) {
                       addToast('Connection Test Failed', 'error');

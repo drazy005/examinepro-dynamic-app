@@ -31,6 +31,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = []; }
                     }
                     // If not superadmin, DO NOT include these keys
+                } else if (s.key === 'branding') {
+                    // Publicly accessible JSON config
+                    try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = {}; }
                 } else {
                     // Public/Common settings
                     config[s.key] = s.value;

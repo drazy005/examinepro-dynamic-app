@@ -72,6 +72,12 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (res.ok) {
         const remoteSettings = await res.json();
         setSettingsState(prev => ({ ...prev, ...remoteSettings }));
+
+        // Sync Branding if available
+        if (remoteSettings.branding) {
+          setBrandingState(prev => ({ ...prev, ...remoteSettings.branding }));
+          SecureStorage.save(STORAGE_KEYS.BRANDING, { ...branding, ...remoteSettings.branding });
+        }
       }
     } catch (e) {
       console.error("Failed to load settings", e);

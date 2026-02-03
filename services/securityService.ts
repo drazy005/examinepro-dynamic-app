@@ -42,7 +42,7 @@ export const enforceSecureEnvironment = (active: boolean) => {
     document.addEventListener('cut', prevent);
     document.addEventListener('keydown', (e) => {
       if (active && (
-        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'C' || e.key === 'J')) || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'C' || e.key === 'J')) ||
         (e.ctrlKey && e.key === 'u') ||
         (e.key === 'PrintScreen')
       )) {
@@ -60,9 +60,9 @@ export const enforceSecureEnvironment = (active: boolean) => {
 export const initializeCspMonitoring = () => {
   document.addEventListener('securitypolicyviolation', (e: SecurityPolicyViolationEvent) => {
     logEvent(
-      null, 
-      'CSP_VIOLATION', 
-      `Blocked: ${e.blockedURI} | Directive: ${e.violatedDirective}`, 
+      null,
+      'CSP_VIOLATION',
+      `Blocked: ${e.blockedURI} | Directive: ${e.violatedDirective}`,
       'CRITICAL'
     );
   });
@@ -70,10 +70,10 @@ export const initializeCspMonitoring = () => {
 
 export const sanitize = (input: string): string => {
   if (typeof input !== 'string') return '';
-  return DOMPurify.sanitize(input, { 
-    ALLOWED_TAGS: [], 
+  return DOMPurify.sanitize(input, {
+    ALLOWED_TAGS: [],
     ALLOWED_ATTR: [],
-    RETURN_TRUSTED_TYPE: false 
+    RETURN_TRUSTED_TYPE: false
   }).trim();
 };
 
@@ -85,9 +85,16 @@ export const validatePasswordStrength = (password: string): boolean => {
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
 };
 
-// This logEvent is client-side. A real implementation would send this to a server endpoint.
+// This logEvent sends logs to the server
 export const logEvent = (user: User | null, action: string, details: string, severity: AuditLog['severity'] = 'INFO') => {
-  console.log(`[AUDIT:${severity}] USER: ${user?.name || 'System'} | ACTION: ${action} | DETAILS: ${details}`);
+  console.log(`[AUDIT:${severity}] ${action}: ${details}`);
+
+  // Fire and forget - don't await to avoid blocking UI
+  fetch('/api/log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, details, severity })
+  }).catch(e => console.error("Failed to push log", e));
 };
 
 export const generateApiKey = (): string => {

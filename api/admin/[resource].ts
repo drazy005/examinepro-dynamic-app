@@ -59,11 +59,20 @@ async function handleLogs(req: VercelRequest, res: VercelResponse, user: any) {
             orderBy: { timestamp: 'desc' },
             include: { user: { select: { name: true, email: true } } }
         });
-        const validLogs = logs.map(l => ({
-            ...l,
-            timestamp: l.timestamp.getTime(),
-            userName: l.user?.name || 'Unknown User'
-        }));
+        const validLogs = logs.map(l => {
+            // Extract severity from details if present (e.g. "[INFO] Message")
+            const sevMatch = l.details.match(/^\[(INFO|WARN|CRITICAL)\]\s*(.*)/);
+            const severity = sevMatch ? sevMatch[1] : 'INFO';
+            const cleanDetails = sevMatch ? sevMatch[2] : l.details;
+
+            return {
+                ...l,
+                details: cleanDetails,
+                severity: severity as 'INFO' | 'WARN' | 'CRITICAL',
+                timestamp: l.timestamp.getTime(),
+                userName: l.user?.name || 'Unknown User'
+            };
+        });
         return res.status(200).json(validLogs);
     }
     return res.status(405).json({ error: 'Method not allowed' });
