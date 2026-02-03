@@ -36,8 +36,8 @@ const App: React.FC = () => {
   // Hooks
   const { questions: fetchedQuestions, saveQuestion, deleteQuestion, refreshQuestions } = useQuestions();
   const { exams, saveExam, deleteExam, bulkDeleteExams, refreshExams } = useExams();
-  const { submissions, updateSubmission, bulkDeleteSubmissions } = useSubmissions();
-  const { users } = useUsers();
+  const { submissions, updateSubmission, bulkDeleteSubmissions, refreshSubmissions } = useSubmissions();
+  const { users, refreshUsers } = useUsers();
 
   const handleLogout = useCallback(async () => {
     await api.auth.logout();
@@ -69,9 +69,11 @@ const App: React.FC = () => {
   useEffect(() => {
     if (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) {
       refreshQuestions();
-      refreshExams(); // Ensure exams are loaded when admin logs in
+      refreshExams();
+      refreshSubmissions();
+      refreshUsers();
     }
-  }, [user, refreshQuestions, refreshExams]);
+  }, [user, refreshQuestions, refreshExams, refreshSubmissions, refreshUsers]);
 
   const handleBulkDeleteQuestions = async (ids: string[]) => {
     try {

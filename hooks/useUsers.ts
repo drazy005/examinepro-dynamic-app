@@ -20,5 +20,14 @@ export const useUsers = () => {
     fetchUsers();
   }, [addToast]);
 
-  return { users };
+  const refreshUsers = async () => {
+    try {
+      const usersData = await api.admin.getUsers();
+      setUsers(usersData);
+    } catch (e) {
+      // Silent error
+    }
+  };
+
+  return { users, refreshUsers };
 };

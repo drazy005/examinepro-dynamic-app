@@ -32,7 +32,7 @@ export const useSubmissions = () => {
       throw e;
     }
   }, [addToast]);
-  
+
   const bulkDeleteSubmissions = useCallback(async (ids: string[]) => {
     const originalSubs = [...submissions];
     setSubmissions(prev => prev.filter(s => !ids.includes(s.id)));
@@ -45,5 +45,14 @@ export const useSubmissions = () => {
     }
   }, [submissions, addToast]);
 
-  return { submissions, setSubmissions, updateSubmission, bulkDeleteSubmissions };
+  const refreshSubmissions = useCallback(async () => {
+    try {
+      const subsData = await api.submissions.list();
+      setSubmissions(subsData);
+    } catch (e) {
+      console.error(e); // Silent or toast
+    }
+  }, []);
+
+  return { submissions, setSubmissions, updateSubmission, bulkDeleteSubmissions, refreshSubmissions };
 };
