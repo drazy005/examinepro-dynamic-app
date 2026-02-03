@@ -68,9 +68,24 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
   };
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthView('reset_sent');
+    setError('');
+
+    const cleanEmail = sanitize(email);
+    if (!cleanEmail) {
+      setError('Email is required.');
+      return;
+    }
+
+    try {
+      await api.auth.forgotPassword(cleanEmail);
+      setAuthView('reset_sent');
+    } catch (err: any) {
+      // We rarely want to show the actual error to avoid enumeration, but for now lets just show a generic message if it fails hard
+      // actually the API returns 200 always unless there is a system error
+      setError(err.message || 'Failed to request reset link.');
+    }
   };
 
   const authBgStyle = branding.backgroundImage
@@ -87,7 +102,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       )}
 
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl max-w-md w-full overflow-hidden transition-all duration-300 border-b-8 z-10 relative animate-in fade-in zoom-in-95" style={{ borderColor: branding.primaryColor }}>
-        <div className="p-10 text-center text-white relative" style={{ backgroundColor: branding.primaryColor }}>
+        <div className="p-6 md:p-10 text-center text-white relative" style={{ backgroundColor: branding.primaryColor }}>
           <div className="bg-white dark:bg-slate-800 p-2 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
             {branding.appIcon ? (
               <img src={branding.appIcon} className="w-full h-full object-contain rounded-lg" alt="Logo" />
@@ -105,7 +120,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               <button className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400">Sign In</button>
               <button onClick={() => { setAuthView('register'); setError(''); }} className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">Register</button>
             </div>
-            <form onSubmit={handleLoginSubmit} className="p-10 space-y-6">
+            <form onSubmit={handleLoginSubmit} className="p-6 md:p-10 space-y-6">
               {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-[10px] font-black uppercase rounded-xl border border-red-100 dark:border-red-900/30">{error}</div>}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Email Address</label>
@@ -129,7 +144,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               <button onClick={() => { setAuthView('login'); setError(''); }} className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">Sign In</button>
               <button className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400">Register</button>
             </div>
-            <form onSubmit={handleRegisterSubmit} className="p-10 space-y-5">
+            <form onSubmit={handleRegisterSubmit} className="p-6 md:p-10 space-y-5">
               {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-[10px] font-black uppercase rounded-xl border border-red-100 dark:border-red-900/30">{error}</div>}
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
@@ -152,9 +167,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         )}
 
         {authView === 'forgot' && (
-          <form onSubmit={handleForgotSubmit} className="p-10 space-y-6">
+          <form onSubmit={handleForgotSubmit} className="p-6 md:p-10 space-y-6">
             <h3 className="text-xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">Reset Password</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">We will send a password reset link to your email.</p>
+            {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-[10px] font-black uppercase rounded-lg border border-red-100 dark:border-red-900/30">{error}</div>}
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Email Address</label>
               <input type="email" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-medium" value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" required />

@@ -82,6 +82,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(userData)
       }));
+    },
+    forgotPassword: async (email: string): Promise<{ message: string }> => {
+      return withLoading(request<{ message: string }>('/auth/forgot', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      }));
     }
   },
 

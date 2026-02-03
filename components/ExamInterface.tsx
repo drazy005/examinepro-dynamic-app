@@ -237,7 +237,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
             )}
             <h1 className="font-black uppercase tracking-tight text-lg truncate max-w-md">{exam.title}</h1>
           </div>
-          <div className={`px-6 py-2 theme-rounded font-mono font-black text-xl transition-colors ${isStressState ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-800'}`}>
+          <div className={`hidden lg:block px-6 py-2 theme-rounded font-mono font-black text-xl transition-colors ${isStressState ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-800'}`}>
             {formatTime(timeLeft)}
           </div>
         </div>
@@ -251,9 +251,35 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
 
         <div className="flex-grow flex flex-col">
           {/* Mobile Palette Toggle / Status Bar */}
-          <div className="lg:hidden mb-4 flex justify-between items-center">
-            <span className="text-xs font-black uppercase text-slate-400">Q {currentIndex + 1} of {exam.questions.length}</span>
-            {/* Simple mobile palette could be a horizontal scroll or dropdown, for now just simple status */}
+          <div className="lg:hidden mb-4 space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-black uppercase text-slate-400">Q {currentIndex + 1} of {exam.questions.length}</span>
+              <div className={`px-3 py-1 theme-rounded font-mono font-black text-sm ${isStressState ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                {formatTime(timeLeft)}
+              </div>
+            </div>
+
+            {/* Mobile Scrollable Palette */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x">
+              {exam.questions.map((_, idx) => {
+                const isAnswered = answers[randomizedExamData.questions[idx].id];
+                const isCurrent = idx === currentIndex;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentIndex(idx)}
+                    className={`min-w-[40px] h-10 theme-rounded text-xs font-bold shrink-0 snap-center transition-all border-2 ${isCurrent
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                      : isAnswered
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-900'
+                        : 'bg-white border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-700'
+                      }`}
+                  >
+                    {idx + 1}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className={`bg-white dark:bg-slate-900 theme-rounded shadow-2xl overflow-hidden border-4 transition-all duration-700 ${isStressState ? 'border-red-500' : 'border-transparent'}`}>

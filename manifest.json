@@ -1,4 +1,3 @@
-
 {
   "short_name": "ExaminePro",
   "name": "ExaminePro Assessment Terminal",
@@ -10,6 +9,7 @@
     }
   ],
   "start_url": ".",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#4f46e5",
   "background_color": "#0f172a"

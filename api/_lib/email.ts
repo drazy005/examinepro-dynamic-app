@@ -94,11 +94,25 @@ export const emailLib = {
             to,
             subject: 'Verify your Account - ExaminePro',
             html: `
-                <div style="font-family: sans-serif; padding: 20px;">
+                <div style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
                     <h2>Welcome to ExaminePro</h2>
                     <p>Please click the button below to verify your email address:</p>
-                    <a href="${link}" style="background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a>
-                    <p style="margin-top: 20px; color: #666; font-size: 12px;">Or copy this link: ${link}</p>
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="btn btn-primary">
+                        <tbody>
+                            <tr>
+                                <td align="center">
+                                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                                        <tbody>
+                                            <tr>
+                                                <td> <a href="${link}" target="_blank" style="background-color: #4f46e5; border: solid 1px #4f46e5; border-radius: 5px; box-sizing: border-box; color: #ffffff; cursor: pointer; display: inline-block; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-decoration: none; text-transform: capitalize;">Verify Email</a> </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 20px; color: #666; font-size: 12px;">Or copy this link: <a href="${link}">${link}</a></p>
                 </div>
             `
         });
@@ -116,11 +130,26 @@ export const emailLib = {
             to,
             subject: 'Reset Password - ExaminePro',
             html: `
-                <div style="font-family: sans-serif; padding: 20px;">
+                <div style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
                     <h2>Password Reset Request</h2>
                     <p>You requested a password reset. Click below to proceed:</p>
-                    <a href="${link}" style="background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="btn btn-primary">
+                        <tbody>
+                            <tr>
+                                <td align="center">
+                                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                                        <tbody>
+                                            <tr>
+                                                <td> <a href="${link}" target="_blank" style="background-color: #4f46e5; border: solid 1px #4f46e5; border-radius: 5px; box-sizing: border-box; color: #ffffff; cursor: pointer; display: inline-block; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-decoration: none; text-transform: capitalize;">Reset Password</a> </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                     <p style="margin-top: 20px; color: #666; font-size: 12px;">If you didn't request this, ignore this email.</p>
+                    <p style="margin-top: 10px; color: #666; font-size: 12px;">Link: <a href="${link}">${link}</a></p>
                 </div>
             `
         });
