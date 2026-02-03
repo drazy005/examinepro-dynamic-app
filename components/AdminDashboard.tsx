@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, memo } from 'react';
-import { User, Exam, QuestionType, ResultRelease, Question, Submission, TimerSettings, ExamTemplate, GradingPolicy, Difficulty, SystemSettings, QuestionResult, UserRole } from '../services/types';
+import { User, Exam, QuestionType, ResultRelease, Question, Submission, TimerSettings, ExamTemplate, GradingPolicy, Difficulty, SystemSettings, QuestionResult, UserRole, BlogPost } from '../services/types';
 import { v4 as uuidv4 } from 'uuid';
 import SubmissionDetailModal from './SubmissionDetailModal';
 import BulkImportModal from './BulkImportModal';
@@ -22,6 +22,7 @@ interface AdminDashboardProps {
   users: User[];
   templates: ExamTemplate[];
   systemSettings: SystemSettings;
+  announcements: BlogPost[];
 
   // Exam Actions
   onSaveExam: (exam: Exam) => Promise<any>;
@@ -56,6 +57,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   submissions,
   users,
   questionBank,
+  announcements,
   onSaveExam,
   onDeleteExam,
   onBulkDeleteExams,
@@ -83,7 +85,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
   // We will trust the passed props for main data to ensure sync.
 
-  const [activeTab, setActiveTab] = useState<'exams' | 'submissions' | 'users' | 'questions' | 'analytics'>('exams');
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'submissions' | 'users' | 'questions' | 'analytics'>('overview');
   const [isCreating, setIsCreating] = useState(false);
   const [aiContext, setAiContext] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -203,15 +205,90 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
   const [selectedSubmission, setSelectedSubmission] = useState<{ sub: Submission, exam: Exam } | null>(null);
 
+  // Filter published announcements
+  const publishedAnnouncements = useMemo(() => announcements.filter(a => a.published), [announcements]);
+
   return (
     <div className="space-y-8 pb-20 dark:text-slate-100">
       <div className="flex border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-950 z-30 overflow-x-auto">
-        {['exams', 'questions', 'submissions', 'analytics', 'users'].map(tab => (
+        {['overview', 'exams', 'questions', 'submissions', 'analytics', 'users'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-8 py-5 text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
             {tab}
           </button>
         ))}
       </div>
+
+      {activeTab === 'overview' && (
+        <div className="px-4 space-y-8">
+          {/* Welcome & Stats */}
+          <div className="bg-white dark:bg-slate-900 p-8 theme-rounded shadow-sm">
+            <h2 className="text-2xl font-black uppercase mb-2">Welcome Back</h2>
+            <p className="text-slate-500 mb-6">Here is what is happening in your system today.</p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl">
+                <div className="text-2xl font-black text-indigo-600">{exams.length}</div>
+                <div className="text-[10px] font-bold uppercase text-slate-400">Total Exams</div>
+              </div>
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl">
+                <div className="text-2xl font-black text-emerald-600">{submissions.length}</div>
+                <div className="text-[10px] font-bold uppercase text-slate-400">Submissions</div>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
+                <div className="text-2xl font-black text-blue-600">{users.length}</div>
+                <div className="text-[10px] font-bold uppercase text-slate-400">Users</div>
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl">
+                <div className="text-2xl font-black text-amber-600">{publishedAnnouncements.length}</div>
+                <div className="text-[10px] font-bold uppercase text-slate-400">Active Announcements</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Announcements */}
+            <div className="flex-1 bg-white dark:bg-slate-900 p-8 theme-rounded shadow-sm">
+              <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                <span className="text-xl">📢</span> Latest Announcements
+              </h3>
+
+              {publishedAnnouncements.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-sm font-bold border-2 border-dashed border-slate-100 rounded-xl">
+                  No active announcements.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {publishedAnnouncements.map(post => (
+                    <div key={post.id} className="p-5 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-bold text-amber-900 dark:text-amber-100">{post.title}</h4>
+                        <span className="text-[10px] font-bold uppercase text-amber-500/70">{new Date(post.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-sm text-amber-800 dark:text-amber-200/80 leading-relaxed">{post.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="md:w-80 bg-white dark:bg-slate-900 p-8 theme-rounded shadow-sm h-fit">
+              <h3 className="font-bold text-lg mb-6">Quick Actions</h3>
+              <div className="space-y-3">
+                <button onClick={() => { setActiveTab('exams'); setIsCreating(true); }} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs shadow-md hover:bg-indigo-700 transition-colors">
+                  + Create New Exam
+                </button>
+                <button onClick={() => setActiveTab('questions')} className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold uppercase text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  Manage Question Bank
+                </button>
+                <button onClick={() => setActiveTab('users')} className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold uppercase text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  View Users
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'submissions' && (
         <div className="px-4 space-y-8">

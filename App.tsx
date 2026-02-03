@@ -69,8 +69,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) {
       refreshQuestions();
+      refreshExams(); // Ensure exams are loaded when admin logs in
     }
-  }, [user, refreshQuestions]);
+  }, [user, refreshQuestions, refreshExams]);
 
   const handleBulkDeleteQuestions = async (ids: string[]) => {
     try {
@@ -257,6 +258,7 @@ const App: React.FC = () => {
           questionBank={fetchedQuestions}
           templates={templates}
           systemSettings={{ aiEnabled: false } as any} // Placeholder for settings until API ready
+          announcements={announcements}
 
           // Actions
           onSaveExam={saveExam}
