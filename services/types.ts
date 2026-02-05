@@ -97,6 +97,12 @@ export interface SmtpConfig {
   secure: boolean;
 }
 
+export interface OAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  redirectUri?: string;
+}
+
 export interface SystemSettings {
   aiGlobalEnabled: boolean;
   aiQuestionGenEnabled: boolean;
@@ -115,6 +121,7 @@ export interface SystemSettings {
   dbConfigs?: DatabaseConfig[];
   apiKeys?: ApiKey[];
   smtpConfig?: SmtpConfig;
+  oauthConfig?: OAuthConfig;
 }
 
 export interface AppBranding {

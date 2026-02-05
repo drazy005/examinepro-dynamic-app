@@ -171,7 +171,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
 
       {/* Navigation */}
       <nav className="flex overflow-x-auto gap-2 pb-2">
-        {['system', 'appearance', 'users', 'audit', 'announcements', 'database', 'api-keys', 'email-server'].map((view) => (
+        {['system', 'appearance', 'users', 'audit', 'announcements', 'database', 'api-keys', 'email-server', 'oauth'].map((view) => (
           <button
             key={view}
             onClick={() => setActiveView(view as any)}
@@ -580,6 +580,72 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                   } catch (e) { addToast('Network error', 'error'); }
                 }} className="w-full py-3 bg-emerald-600 text-white font-bold uppercase rounded-lg">Send Broadcast</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeView === 'oauth' && (
+          <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+            <h2 className="font-black text-2xl uppercase mb-6">Google OAuth Configuration</h2>
+            <div className="max-w-2xl space-y-6">
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded text-amber-900 text-sm">
+                <strong>Important:</strong> You must create credentials in the <a href="https://console.cloud.google.com/" target="_blank" rel="noreferrer" className="underline">Google Cloud Console</a>.
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <li>Create a new Project (or select existing).</li>
+                  <li>Go to <strong>APIs & Services</strong> &gt; <strong>Credentials</strong>.</li>
+                  <li>Create <strong>OAuth 2.0 Client ID</strong>.</li>
+                  <li>Add <code className="bg-amber-100 px-1 rounded">{window.location.origin}</code> to <strong>Authorized JavaScript origins</strong>.</li>
+                  <li>Add <code className="bg-amber-100 px-1 rounded">{window.location.origin}/api/auth/google/callback</code> to <strong>Authorized redirect URIs</strong>.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Google Client ID</label>
+                  <input
+                    className="w-full p-4 font-bold bg-slate-50 dark:bg-slate-950 rounded-xl border-2 border-transparent focus:border-indigo-500 outline-none transition-colors"
+                    placeholder="e.g. 12345...apps.googleusercontent.com"
+                    value={settings.oauthConfig?.clientId || ''}
+                    onChange={e => setSettings({ ...settings, oauthConfig: { ...settings.oauthConfig!, clientId: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Google Client Secret</label>
+                  <input
+                    type="password"
+                    className="w-full p-4 font-bold bg-slate-50 dark:bg-slate-950 rounded-xl border-2 border-transparent focus:border-indigo-500 outline-none transition-colors"
+                    placeholder="Client Secret"
+                    value={settings.oauthConfig?.clientSecret || ''}
+                    onChange={e => setSettings({ ...settings, oauthConfig: { ...settings.oauthConfig!, clientSecret: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Redirect URI Override (Optional)</label>
+                  <input
+                    className="w-full p-4 font-bold bg-slate-50 dark:bg-slate-950 rounded-xl border-2 border-transparent focus:border-indigo-500 outline-none transition-colors"
+                    placeholder={`Default: ${typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/google/callback`}
+                    value={settings.oauthConfig?.redirectUri || ''}
+                    onChange={e => setSettings({ ...settings, oauthConfig: { ...settings.oauthConfig!, redirectUri: e.target.value } })}
+                  />
+                  <p className="text-[10px] text-slate-400 mt-2 font-bold">Only set this if your callback URL is different explicitly (e.g. behind a proxy).</p>
+                </div>
+              </div>
+
+              <button
+                onClick={async () => {
+                  setSaveModal({ show: true, status: 'processing', message: 'Saving OAuth Settings...' });
+                  try {
+                    await updateSettings({ oauthConfig: settings.oauthConfig });
+                    setSaveModal({ show: true, status: 'success', message: 'OAuth Settings Saved!' });
+                    setTimeout(() => setSaveModal(prev => ({ ...prev, show: false })), 2000);
+                  } catch (e) {
+                    setSaveModal({ show: true, status: 'error', message: 'Failed to save settings.' });
+                  }
+                }}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase rounded-xl transition-all shadow-lg active:scale-95"
+              >
+                Save OAuth Settings
+              </button>
             </div>
           </div>
         )}

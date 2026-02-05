@@ -7,19 +7,27 @@ import { initializeProctoring, stopProctoring, ProctoringState } from '../servic
 interface ExamInterfaceProps {
   exam: Exam;
   studentId: string;
+  submissionId?: string;
+  initialAnswers?: Record<string, string>;
+  initialStartTime?: number;
   onSubmit: (submission: Partial<Submission>) => void;
   onCancel: () => void;
   isAdminPreview?: boolean;
 }
 
+import { api } from '../services/api'; // Ensure api import is present
+
 const ExamInterface: React.FC<ExamInterfaceProps> = ({
   exam,
   studentId,
+  submissionId,
+  initialAnswers = {},
+  initialStartTime,
   onSubmit,
   onCancel,
   isAdminPreview = false
 }) => {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [proctorAlerts, setProctorAlerts] = useState<number>(0);
   const [proctorState, setProctorState] = useState<ProctoringState | null>(null);
@@ -43,8 +51,9 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
 
   const calculateInitialTime = () => {
     const now = Date.now();
+    const start = initialStartTime || now;
     // Simple duration based timer
-    const expiry = now + (exam.durationMinutes * 60 + (exam.timerSettings.gracePeriodSeconds || 0)) * 1000;
+    const expiry = start + (exam.durationMinutes * 60 + (exam.timerSettings.gracePeriodSeconds || 0)) * 1000;
     return Math.max(0, Math.floor((expiry - now) / 1000));
   };
 
@@ -104,6 +113,24 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
     return () => clearInterval(interval);
   }, [exam.id, exam]);
 
+  // Auto-Save Logic
+  const answersRef = useRef(answers);
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+
+  useEffect(() => {
+    if (!submissionId || isAdminPreview) return;
+
+    // Initial save (to ensure draft exists if empty) - optional, but maybe good.
+    // Loop
+    const interval = setInterval(() => {
+      if (Object.keys(answersRef.current).length > 0) {
+        api.submissions.saveDraft(submissionId, answersRef.current).catch(err => console.error("Auto-save failed", err));
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [submissionId, isAdminPreview]);
+
   const handleSubmit = useCallback(() => {
     if (isSubmitting) return;
 
@@ -123,6 +150,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
       studentId,
       answers,
       submittedAt: Date.now(),
+      id: submissionId // Pass ID if updating existing
     });
   }, [exam.id, studentId, answers, onSubmit, isSubmitting, exam.questions.length]);
 

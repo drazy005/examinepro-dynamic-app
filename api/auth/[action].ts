@@ -5,6 +5,7 @@ import { emailLib } from '../_lib/email.js';
 import { parse } from 'cookie';
 
 import crypto from 'crypto';
+import { checkRateLimit } from '../_lib/rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query;
@@ -99,6 +100,16 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
 
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Missing credentials' });
+
+    // Rate Limit: 5 attempts per 15 minutes per IP (approximated by email here to avoid proxy issues, or both)
+    // Using email as key prevents locking out whole office, but allows user enumeration/lockout attack.
+    // Better: IP + Email combo or just IP. Let's use IP if available, fallback to email prefix.
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const rateLimitKey = `login_${ip}_${email}`;
+
+    if (!(await checkRateLimit(rateLimitKey, 5, 900))) {
+        return res.status(429).json({ error: 'Too many login attempts. Please try again later.' });
+    }
 
     const user = await db.user.findUnique({ where: { email } });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });

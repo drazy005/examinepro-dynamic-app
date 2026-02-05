@@ -39,13 +39,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 async function handleUsers(req: VercelRequest, res: VercelResponse, user: any) {
     if (req.method === 'GET') {
-        const users = await db.user.findMany({
-            select: {
-                id: true, name: true, email: true, role: true, isVerified: true, lastActive: true, createdAt: true
-            } as any,
-            orderBy: { createdAt: 'desc' }
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 50;
+        const skip = (page - 1) * limit;
+
+        const [users, total] = await Promise.all([
+            db.user.findMany({
+                skip,
+                take: limit,
+                select: {
+                    id: true, name: true, email: true, role: true, isVerified: true, lastActive: true, createdAt: true
+                } as any,
+                orderBy: { createdAt: 'desc' }
+            }),
+            db.user.count()
+        ]);
+
+        return res.status(200).json({
+            data: users,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
         });
-        return res.status(200).json(users);
     }
     return res.status(405).json({ error: 'Method not allowed' });
 }
@@ -54,11 +72,20 @@ async function handleLogs(req: VercelRequest, res: VercelResponse, user: any) {
     if ((user.role as string) !== 'SUPERADMIN') return res.status(403).json({ error: 'Forbidden' });
 
     if (req.method === 'GET') {
-        const logs = await db.auditLog.findMany({
-            take: 200,
-            orderBy: { timestamp: 'desc' },
-            include: { user: { select: { name: true, email: true } } }
-        });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 50;
+        const skip = (page - 1) * limit;
+
+        const [logs, total] = await Promise.all([
+            db.auditLog.findMany({
+                skip,
+                take: limit,
+                orderBy: { timestamp: 'desc' },
+                include: { user: { select: { name: true, email: true } } }
+            }),
+            db.auditLog.count()
+        ]);
+
         const validLogs = logs.map(l => {
             // Extract severity from details if present (e.g. "[INFO] Message")
             const sevMatch = l.details.match(/^\[(INFO|WARN|CRITICAL)\]\s*(.*)/);
@@ -73,7 +100,16 @@ async function handleLogs(req: VercelRequest, res: VercelResponse, user: any) {
                 userName: l.user?.name || 'Unknown User'
             };
         });
-        return res.status(200).json(validLogs);
+
+        return res.status(200).json({
+            data: validLogs,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     }
     return res.status(405).json({ error: 'Method not allowed' });
 }

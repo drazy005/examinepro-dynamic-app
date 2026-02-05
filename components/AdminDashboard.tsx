@@ -15,11 +15,10 @@ import { useQuestions } from '../hooks/useQuestions';
 import QuestionEditor from './QuestionEditor';
 import QuestionSelector from './QuestionSelector';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import { api } from '../services/api';
 
 interface AdminDashboardProps {
   exams: Exam[];
-  submissions: Submission[];
-  users: User[];
   templates: ExamTemplate[];
   systemSettings: SystemSettings;
   announcements: BlogPost[];
@@ -30,14 +29,6 @@ interface AdminDashboardProps {
   onBulkDeleteExams: (ids: string[]) => void;
   onTogglePublish: (id: string, published: boolean) => void;
   onPreviewExam: (exam: Exam) => void;
-
-  // Submission Actions
-  onBulkDeleteSubmissions: (ids: string[]) => void;
-  onManualGrade: (submissionId: string, questionId: string, result: QuestionResult) => void;
-  onReleaseResults: (examId: string) => void;
-  onReleaseSingleSubmission: (id: string) => void;
-  onReleaseAllDelayedResults: () => void;
-  onAIGradeSubmission: (id: string) => Promise<void>;
 
   // Bank Actions
   questionBank: Question[];
@@ -54,20 +45,14 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   exams,
-  submissions,
-  users,
+  templates,
   questionBank,
   announcements,
   onSaveExam,
   onDeleteExam,
   onBulkDeleteExams,
-  onBulkDeleteSubmissions,
   onTogglePublish,
   onPreviewExam,
-  onManualGrade,
-  onReleaseAllDelayedResults,
-  onReleaseResults,
-  onReleaseSingleSubmission,
   onAddToBank,
   onUpdateBankQuestion,
   onDeleteFromBank,
@@ -76,14 +61,54 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 }) => {
   const { settings: systemSettings } = useSystem();
   const { addToast } = useToast();
+  const { users } = useUsers(); // Assuming useUsers provides a 'users' array
 
-  const { questions: unusedQuestions, saveQuestion, deleteQuestion } = useQuestions(); // Keep for internal bank management if needed, but actions are passed now. 
-  // actually onAddToBank is passed, so we should use that. 
-  // But wait, the component uses saveQuestion/deleteQuestion internally for the QuestionEditor.
-  // We should prob use the passed props for those too if available, or keep the hook for BANK management if it's creating questions directly.
-  // The prompt says "questionBank" is passed. 
+  // Local Data State with Pagination
+  const [submissionsData, setSubmissionsData] = useState<{ data: Submission[], total: number, page: number, totalPages: number }>({ data: [], total: 0, page: 1, totalPages: 0 });
+  const [usersData, setUsersData] = useState<{ data: User[], total: number, page: number, totalPages: number }>({ data: [], total: 0, page: 1, totalPages: 0 });
+  const [logsData, setLogsData] = useState<{ data: any[], total: number, page: number, totalPages: number }>({ data: [], total: 0, page: 1, totalPages: 0 });
 
-  // We will trust the passed props for main data to ensure sync.
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
+  // Fetch Data Effects
+  const fetchSubmissions = async (page = 1) => {
+    setIsLoadingData(true);
+    try {
+      const { data, pagination } = await api.submissions.list(page, 20); // Limit 20
+      setSubmissionsData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
+    } catch (e) { addToast("Failed to load submissions", "error"); }
+    setIsLoadingData(false);
+  };
+
+  const fetchUsers = async (page = 1) => {
+    setIsLoadingData(true);
+    try {
+      const { data, pagination } = await api.admin.getUsers(page, 20);
+      setUsersData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
+    } catch (e) { addToast("Failed to load users", "error"); }
+    setIsLoadingData(false);
+  };
+
+  const fetchLogs = async (page = 1) => {
+    setIsLoadingData(true);
+    try {
+      const { data, pagination } = await api.admin.getLogs(page, 20);
+      setLogsData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
+    } catch (e) { addToast("Failed to load logs", "error"); }
+    setIsLoadingData(false);
+  };
+
+  // Initial Fetch based on Tab
+  React.useEffect(() => {
+    if (activeTab === 'submissions') fetchSubmissions(1);
+    if (activeTab === 'users') fetchUsers(1);
+    // if (activeTab === 'logs') fetchLogs(1); // logs tab missing in UI currently?
+    if (activeTab === 'overview') {
+      // fetch simple counts or just fetch page 1 of each to get 'total'
+      fetchSubmissions(1);
+      fetchUsers(1);
+    }
+  }, [activeTab]);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'submissions' | 'users' | 'questions' | 'analytics'>('overview');
   const [isCreating, setIsCreating] = useState(false);
@@ -183,14 +208,79 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
     setIsCreating(false);
   };
 
+  const handleBulkDeleteSubmissions = async (ids: string[]) => {
+    try {
+      await api.submissions.bulkDelete(ids);
+      addToast(`Successfully deleted ${ids.length} submissions.`, 'success');
+      fetchSubmissions(submissionsData.page); // Refresh current page
+      setSelectedSubIds(new Set());
+    } catch (e) {
+      addToast('Failed to delete submissions.', 'error');
+    }
+  };
+
+  const handleManualGrade = async (submissionId: string, questionId: string, result: QuestionResult) => {
+    try {
+      await api.submissions.manualGrade(submissionId, questionId, result);
+      addToast('Question graded successfully.', 'success');
+      fetchSubmissions(submissionsData.page); // Refresh current page
+    } catch (e) {
+      addToast('Failed to grade question.', 'error');
+    }
+  };
+
+  const handleReleaseResults = async (examId: string) => {
+    try {
+      await api.submissions.releaseResultsForExam(examId);
+      addToast('Results released for exam.', 'success');
+      fetchSubmissions(submissionsData.page); // Refresh current page
+    } catch (e) {
+      addToast('Failed to release results.', 'error');
+    }
+  };
+
+  const handleReleaseSingleSubmission = async (id: string) => {
+    try {
+      await api.submissions.releaseSingleSubmission(id);
+      addToast('Submission results released.', 'success');
+      fetchSubmissions(submissionsData.page); // Refresh current page
+    } catch (e) {
+      addToast('Failed to release submission results.', 'error');
+    }
+  };
+
+  const handleReleaseAllDelayedResults = async () => {
+    try {
+      await api.submissions.releaseAllDelayedResults();
+      addToast('All delayed results released.', 'success');
+      fetchSubmissions(submissionsData.page); // Refresh current page
+    } catch (e) {
+      addToast('Failed to release all delayed results.', 'error');
+    }
+  };
+
+  const handleAIGradeSubmission = async (id: string) => {
+    try {
+      await api.submissions.aiGrade(id);
+      addToast('AI grading initiated.', 'success');
+      fetchSubmissions(submissionsData.page); // Refresh current page
+    } catch (e) {
+      addToast('Failed to initiate AI grading.', 'error');
+    }
+  };
+
   const filteredSubmissions = useMemo(() => {
     const term = submissionFilter.toLowerCase();
-    return submissions.filter(s => {
+    return submissionsData.data.filter(s => {
       const exam = exams.find(e => e.id === s.examId);
-      const student = users.find(u => u.id === s.studentId);
-      return (exam?.title || '').toLowerCase().includes(term) || (student?.name || '').toLowerCase().includes(term);
+      // Student might not be in local 'usersData.data' page.
+      // Ideally backend filtering. Client filter simply works on *current page*.
+      // For reliable search, we need backend search API.
+      // For now, filter on current page.
+      const studentName = (s.user as any)?.name || 'Unknown';
+      return (exam?.title || '').toLowerCase().includes(term) || (studentName).toLowerCase().includes(term);
     });
-  }, [submissions, exams, users, submissionFilter]);
+  }, [submissionsData.data, exams, submissionFilter]);
 
   const handleSelectSubmission = (id: string) => {
     const newSet = new Set(selectedSubIds);
@@ -231,11 +321,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 <div className="text-[10px] font-bold uppercase text-slate-400">Total Exams</div>
               </div>
               <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl">
-                <div className="text-2xl font-black text-emerald-600">{submissions.length}</div>
+                <div className="text-2xl font-black text-emerald-600">{submissionsData.total}</div>
                 <div className="text-[10px] font-bold uppercase text-slate-400">Submissions</div>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
-                <div className="text-2xl font-black text-blue-600">{users.length}</div>
+                <div className="text-2xl font-black text-blue-600">{usersData.total}</div>
                 <div className="text-[10px] font-bold uppercase text-slate-400">Users</div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl">
@@ -362,6 +452,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 })}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            <div className="flex justify-between items-center mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
+              <button
+                disabled={submissionsData.page === 1}
+                onClick={() => fetchSubmissions(submissionsData.page - 1)}
+                className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
+              >Previous</button>
+              <span className="text-xs font-bold text-slate-400">Page {submissionsData.page} of {submissionsData.totalPages || 1}</span>
+              <button
+                disabled={submissionsData.page >= submissionsData.totalPages}
+                onClick={() => fetchSubmissions(submissionsData.page + 1)}
+                className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
+              >Next</button>
+            </div>
           </div>
         </div>
       )}
@@ -474,224 +579,238 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
         </div>
       )}
 
-      {activeTab === 'exams' && (
-        <div className="px-4 space-y-8">
-          {isCreating ? (
-            <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm animate-in zoom-in-95">
-              <h2 className="font-black text-2xl uppercase mb-6">Create New Exam</h2>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Exam Title</label>
-                  <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.title} onChange={e => setEditingExam({ ...editingExam, title: e.target.value })} placeholder="e.g. Final Anatomy Assessment" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {
+        activeTab === 'exams' && (
+          <div className="px-4 space-y-8">
+            {isCreating ? (
+              <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm animate-in zoom-in-95">
+                <h2 className="font-black text-2xl uppercase mb-6">Create New Exam</h2>
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Duration (Minutes)</label>
-                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.durationMinutes} onChange={e => setEditingExam({ ...editingExam, durationMinutes: parseInt(e.target.value) || 0 })} />
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Exam Title</label>
+                    <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.title} onChange={e => setEditingExam({ ...editingExam, title: e.target.value })} placeholder="e.g. Final Anatomy Assessment" />
                   </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Pass Mark (%)</label>
-                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.passMark} onChange={e => setEditingExam({ ...editingExam, passMark: parseInt(e.target.value) || 0 })} />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Scheduled Release (Optional)</label>
-                    <input
-                      type="datetime-local"
-                      className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm"
-                      // Simple approach: Use string value from/to local ISO without complex conversion if possible, or strip 'Z'
-                      // Best way: Use a string state for this input, but since we bind to editingExam.scheduledReleaseDate (Date object or string), we convert.
-                      value={editingExam.scheduledReleaseDate ?
-                        (typeof editingExam.scheduledReleaseDate === 'string'
-                          ? editingExam.scheduledReleaseDate.substring(0, 16)
-                          : new Date(editingExam.scheduledReleaseDate).toISOString().slice(0, 16))
-                        : ''}
-                      onChange={e => setEditingExam({ ...editingExam, scheduledReleaseDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1">Leave blank to publish immediately.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Warning Threshold (Min)</label>
-                    <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.timerSettings?.warningThresholdMinutes || 5} onChange={e => setEditingExam({ ...editingExam, timerSettings: { ...editingExam.timerSettings!, warningThresholdMinutes: parseInt(e.target.value) || 5 } })} />
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <button onClick={() => setIsSelectingQuestions(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs shadow-md transition-all flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                    Select From Bank
-                  </button>
-                  <button onClick={() => setEditingExam({ ...editingExam, questions: [] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Clear All</button>
-                </div>
-
-                {isSelectingQuestions && (
-                  <QuestionSelector
-                    questions={questionBank}
-                    initialSelection={editingExam.questions?.map(q => q.id) || []}
-                    onClose={() => setIsSelectingQuestions(false)}
-                    onSelect={(selected) => {
-                      setEditingExam({ ...editingExam, questions: selected });
-                      setIsSelectingQuestions(false);
-                      addToast(`${selected.length} questions added to exam.`, 'success');
-                    }}
-                  />
-                )}
-
-                <div className="bg-slate-50 dark:bg-slate-800 p-6 theme-rounded">
-                  <h3 className="font-bold uppercase text-xs text-slate-400 mb-4">Selected Questions ({editingExam.questions?.length})</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {editingExam.questions?.map((q, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded shadow-sm">
-                        <span className="text-sm font-medium truncate w-3/4">{q.text}</span>
-                        <button onClick={() => setEditingExam({ ...editingExam, questions: editingExam.questions?.filter((_, i) => i !== idx) })} className="text-red-500 text-xs font-bold uppercase">Remove</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-between gap-4 pt-4 border-t">
-                  <div className="flex gap-2">
-                    <button onClick={() => setIsCreating(false)} className="px-6 py-3 font-bold uppercase text-xs text-slate-500">Cancel</button>
-                    {/* Duplicate / Save as Copy Feature */}
-                    {editingExam.id && (
-                      <button onClick={async () => {
-                        const copy = { ...editingExam, id: undefined, title: `${editingExam.title} (Copy)`, published: false };
-                        setEditingExam(copy);
-                        // We just updated state, user can now Save as new.
-                        addToast('Exam duplicated. Click Save to create.', 'success');
-                      }} className="px-6 py-3 font-bold uppercase text-xs text-indigo-600">Save as Copy</button>
-                    )}
-                  </div>
-                  <button onClick={handleSave} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs shadow-lg">Save Exam</button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
-              <div className="flex justify-between mb-8">
-                <h2 className="font-black text-2xl uppercase">All Exams</h2>
-                <button onClick={() => { setEditingExam({ title: '', questions: [], category: 'General', difficulty: Difficulty.MEDIUM, durationMinutes: 30, passMark: 50, resultRelease: ResultRelease.INSTANT, timerSettings: defaultTimerSettings, gradingPolicy: defaultGradingPolicy, version: 1 }); setIsCreating(true); }} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs">+ Create Exam</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {exams.map(exam => (
-                  <div key={exam.id} className="p-6 border rounded-2xl bg-slate-50 dark:bg-slate-800 hover:border-indigo-500 transition-colors group cursor-pointer" onClick={() => onPreviewExam(exam)}>
-                    <h3 className="font-bold text-lg mb-2">{exam.title}</h3>
-                    <div className="flex gap-2 text-[10px] font-black uppercase text-slate-400">
-                      <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.questions.length} Qs</span>
-                      <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.durationMinutes} m</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Duration (Minutes)</label>
+                      <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.durationMinutes} onChange={e => setEditingExam({ ...editingExam, durationMinutes: parseInt(e.target.value) || 0 })} />
                     </div>
-                    <div className="mt-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex justify-between items-center">
-                        <span className="text-indigo-600 text-xs font-bold uppercase">Actions</span>
-                        <div className="flex gap-2">
-                          <button onClick={(e) => {
-                            e.stopPropagation(); onTogglePublish(exam.id, !exam.published);
-                          }} className={`text-xs font-bold uppercase hover:underline z-10 ${exam.published ? 'text-slate-400' : 'text-green-600'}`}>{exam.published ? 'Hide' : 'Publish'}</button>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Pass Mark (%)</label>
+                      <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.passMark} onChange={e => setEditingExam({ ...editingExam, passMark: parseInt(e.target.value) || 0 })} />
+                    </div>
+                  </div>
 
-                          <button onClick={(e) => {
-                            e.stopPropagation(); setEditingExam(exam); setIsCreating(true);
-                          }} className="text-indigo-600 text-xs font-bold uppercase hover:underline z-10">Edit</button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Scheduled Release (Optional)</label>
+                      <input
+                        type="datetime-local"
+                        className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm"
+                        // Simple approach: Use string value from/to local ISO without complex conversion if possible, or strip 'Z'
+                        // Best way: Use a string state for this input, but since we bind to editingExam.scheduledReleaseDate (Date object or string), we convert.
+                        value={editingExam.scheduledReleaseDate ?
+                          (typeof editingExam.scheduledReleaseDate === 'string'
+                            ? editingExam.scheduledReleaseDate.substring(0, 16)
+                            : new Date(editingExam.scheduledReleaseDate).toISOString().slice(0, 16))
+                          : ''}
+                        onChange={e => setEditingExam({ ...editingExam, scheduledReleaseDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Leave blank to publish immediately.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Warning Threshold (Min)</label>
+                      <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.timerSettings?.warningThresholdMinutes || 5} onChange={e => setEditingExam({ ...editingExam, timerSettings: { ...editingExam.timerSettings!, warningThresholdMinutes: parseInt(e.target.value) || 5 } })} />
+                    </div>
+                  </div>
 
-                          <button onClick={(e) => {
-                            e.stopPropagation(); onPreviewExam(exam);
-                          }} className="text-blue-600 text-xs font-bold uppercase hover:underline z-10">Preview</button>
+                  <div className="flex gap-4">
+                    <button onClick={() => setIsSelectingQuestions(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs shadow-md transition-all flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                      Select From Bank
+                    </button>
+                    <button onClick={() => setEditingExam({ ...editingExam, questions: [] })} className="bg-slate-100 hover:bg-slate-200 text-slate-900 px-6 py-3 rounded-xl font-bold uppercase text-xs">Clear All</button>
+                  </div>
 
-                          {/* Quick Duration Edit for Active Exams */}
-                          <button onClick={async (e) => {
-                            e.stopPropagation();
-                            const newTime = prompt("Enter new duration (minutes):", exam.durationMinutes.toString());
-                            if (newTime && !isNaN(parseInt(newTime))) {
-                              try {
-                                await fetch(`/api/exams/${exam.id}`, {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ durationMinutes: parseInt(newTime) })
-                                });
-                                alert('Time added! Students will see update in < 30s.');
-                              } catch (e) { alert('Failed to add time'); }
-                            }
-                          }} className="text-emerald-600 text-xs font-bold uppercase hover:underline">Add Time</button>
+                  {isSelectingQuestions && (
+                    <QuestionSelector
+                      questions={questionBank}
+                      initialSelection={editingExam.questions?.map(q => q.id) || []}
+                      onClose={() => setIsSelectingQuestions(false)}
+                      onSelect={(selected) => {
+                        setEditingExam({ ...editingExam, questions: selected });
+                        setIsSelectingQuestions(false);
+                        addToast(`${selected.length} questions added to exam.`, 'success');
+                      }}
+                    />
+                  )}
 
-                          <button onClick={(e) => { e.stopPropagation(); onBulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
+                  <div className="bg-slate-50 dark:bg-slate-800 p-6 theme-rounded">
+                    <h3 className="font-bold uppercase text-xs text-slate-400 mb-4">Selected Questions ({editingExam.questions?.length})</h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {editingExam.questions?.map((q, idx) => (
+                        <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded shadow-sm">
+                          <span className="text-sm font-medium truncate w-3/4">{q.text}</span>
+                          <button onClick={() => setEditingExam({ ...editingExam, questions: editingExam.questions?.filter((_, i) => i !== idx) })} className="text-red-500 text-xs font-bold uppercase">Remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between gap-4 pt-4 border-t">
+                    <div className="flex gap-2">
+                      <button onClick={() => setIsCreating(false)} className="px-6 py-3 font-bold uppercase text-xs text-slate-500">Cancel</button>
+                      {/* Duplicate / Save as Copy Feature */}
+                      {editingExam.id && (
+                        <button onClick={async () => {
+                          const copy = { ...editingExam, id: undefined, title: `${editingExam.title} (Copy)`, published: false };
+                          setEditingExam(copy);
+                          // We just updated state, user can now Save as new.
+                          addToast('Exam duplicated. Click Save to create.', 'success');
+                        }} className="px-6 py-3 font-bold uppercase text-xs text-indigo-600">Save as Copy</button>
+                      )}
+                    </div>
+                    <button onClick={handleSave} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs shadow-lg">Save Exam</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+                <div className="flex justify-between mb-8">
+                  <h2 className="font-black text-2xl uppercase">All Exams</h2>
+                  <button onClick={() => { setEditingExam({ title: '', questions: [], category: 'General', difficulty: Difficulty.MEDIUM, durationMinutes: 30, passMark: 50, resultRelease: ResultRelease.INSTANT, timerSettings: defaultTimerSettings, gradingPolicy: defaultGradingPolicy, version: 1 }); setIsCreating(true); }} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs">+ Create Exam</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {exams.map(exam => (
+                    <div key={exam.id} className="p-6 border rounded-2xl bg-slate-50 dark:bg-slate-800 hover:border-indigo-500 transition-colors group cursor-pointer" onClick={() => onPreviewExam(exam)}>
+                      <h3 className="font-bold text-lg mb-2">{exam.title}</h3>
+                      <div className="flex gap-2 text-[10px] font-black uppercase text-slate-400">
+                        <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.questions.length} Qs</span>
+                        <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.durationMinutes} m</span>
+                      </div>
+                      <div className="mt-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-between items-center">
+                          <span className="text-indigo-600 text-xs font-bold uppercase">Actions</span>
+                          <div className="flex gap-2">
+                            <button onClick={(e) => {
+                              e.stopPropagation(); onTogglePublish(exam.id, !exam.published);
+                            }} className={`text-xs font-bold uppercase hover:underline z-10 ${exam.published ? 'text-slate-400' : 'text-green-600'}`}>{exam.published ? 'Hide' : 'Publish'}</button>
+
+                            <button onClick={(e) => {
+                              e.stopPropagation(); setEditingExam(exam); setIsCreating(true);
+                            }} className="text-indigo-600 text-xs font-bold uppercase hover:underline z-10">Edit</button>
+
+                            <button onClick={(e) => {
+                              e.stopPropagation(); onPreviewExam(exam);
+                            }} className="text-blue-600 text-xs font-bold uppercase hover:underline z-10">Preview</button>
+
+                            {/* Quick Duration Edit for Active Exams */}
+                            <button onClick={async (e) => {
+                              e.stopPropagation();
+                              const newTime = prompt("Enter new duration (minutes):", exam.durationMinutes.toString());
+                              if (newTime && !isNaN(parseInt(newTime))) {
+                                try {
+                                  await fetch(`/api/exams/${exam.id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ durationMinutes: parseInt(newTime) })
+                                  });
+                                  alert('Time added! Students will see update in < 30s.');
+                                } catch (e) { alert('Failed to add time'); }
+                              }
+                            }} className="text-emerald-600 text-xs font-bold uppercase hover:underline">Add Time</button>
+
+                            <button onClick={(e) => { e.stopPropagation(); onBulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+            {activeTab === 'users' && (
+              <div className="px-4">
+                <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+                  <h2 className="font-black text-2xl uppercase mb-8">Registered Users</h2>
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b">
+                        <th className="pb-4">Name</th>
+                        <th className="pb-4">Email</th>
+                        <th className="pb-4">Role</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm">
+                      {usersData.data.map(u => (
+                        <tr key={u.id} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                          <td className="py-4 font-bold">{u.name}</td>
+                          <td className="py-4 text-slate-500">{u.email}</td>
+                          <td className="py-4"><span className="bg-slate-100 px-2 py-1 rounded text-[10px] uppercase font-black">{u.role}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-      {activeTab === 'users' && (
-        <div className="px-4">
-          <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
-            <h2 className="font-black text-2xl uppercase mb-8">Registered Users</h2>
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b">
-                  <th className="pb-4">Name</th>
-                  <th className="pb-4">Email</th>
-                  <th className="pb-4">Role</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {users.map(u => (
-                  <tr key={u.id} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-4 font-bold">{u.name}</td>
-                    <td className="py-4 text-slate-500">{u.email}</td>
-                    <td className="py-4"><span className="bg-slate-100 px-2 py-1 rounded text-[10px] uppercase font-black">{u.role}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
+                  {/* Users Pagination */}
+                  <div className="flex justify-between items-center mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
+                    <button
+                      disabled={usersData.page === 1}
+                      onClick={() => fetchUsers(usersData.page - 1)}
+                      className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
+                    >Previous</button>
+                    <span className="text-xs font-bold text-slate-400">Page {usersData.page} of {usersData.totalPages || 1}</span>
+                    <button
+                      disabled={usersData.page >= usersData.totalPages}
+                      onClick={() => fetchUsers(usersData.page + 1)}
+                      className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
+                    >Next</button>
+                  </div>
+                </div>
+              </div>
       {activeTab === 'analytics' && (
-        <AnalyticsDashboard
-          exams={exams}
-          submissions={submissions}
-          users={users}
-          onPreviewExam={onPreviewExam}
-          onViewSubmission={(sub, exam) => setSelectedSubmission({ sub, exam })}
-        />
-      )}
+              <AnalyticsDashboard
+                exams={exams}
+                submissions={submissionsData.data} // Analytics ideally needs its own non-paginated fetch or summary endpoint
+                users={usersData.data}
+                onPreviewExam={onPreviewExam}
+                onViewSubmission={(sub, exam) => setSelectedSubmission({ sub, exam })}
+              />
+            )}
 
-      {selectedSubmission && (
-        <SubmissionDetailModal
-          submission={selectedSubmission.sub}
-          exam={selectedSubmission.exam}
-          onClose={() => setSelectedSubmission(null)}
-          systemSettings={systemSettings}
-          isAdmin={true}
-          onManualGrade={(qId, res) => {
-            // Adapt the call to the prop
-            if (selectedSubmission) {
-              onManualGrade(selectedSubmission.sub.id, qId, res);
-              // We don't manually update local state here anymore because the parent handles the definitive update
-              // and passes back the new submissions list.
-              setSelectedSubmission(null); // Close to refresh/avoid stale state or keep open handled by state? 
-              // Simple approach: Close modal on save.
-              addToast('Grade saved', 'success');
+            {selectedSubmission && (
+              <SubmissionDetailModal
+                submission={selectedSubmission.sub}
+                exam={selectedSubmission.exam}
+                onClose={() => setSelectedSubmission(null)}
+                systemSettings={systemSettings}
+                isAdmin={true}
+                onManualGrade={(qId, res) => {
+                  // Adapt the call to the prop
+                  if (selectedSubmission) {
+                    onManualGrade(selectedSubmission.sub.id, qId, res);
+                    // We don't manually update local state here anymore because the parent handles the definitive update
+                    // and passes back the new submissions list.
+                    setSelectedSubmission(null); // Close to refresh/avoid stale state or keep open handled by state? 
+                    // Simple approach: Close modal on save.
+                    addToast('Grade saved', 'success');
+                  }
+                }}
+              />
+            )
             }
-          }}
-        />
-      )}
 
-      {isImporting && (
-        <BulkImportModal
-          onImport={handleBatchImport}
-          onClose={() => setIsImporting(false)}
-        />
-      )}
-    </div >
-  );
+            {
+              isImporting && (
+                <BulkImportModal
+                  onImport={handleBatchImport}
+                  onClose={() => setIsImporting(false)}
+                />
+              )
+            }
+          </div >
+        );
 });
 
-export default AdminDashboard;
+      export default AdminDashboard;

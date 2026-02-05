@@ -14,8 +14,7 @@ import { api } from './services/api';
 import { useToast } from './services/ToastContext';
 import { useQuestions } from './hooks/useQuestions';
 import { useExams } from './hooks/useExams';
-import { useSubmissions } from './hooks/useSubmissions';
-import { useUsers } from './hooks/useUsers';
+
 
 const App: React.FC = () => {
   const { branding, isDarkMode, toggleDarkMode, refreshSettings } = useSystem();
@@ -24,6 +23,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
+  const [activeSubmission, setActiveSubmission] = useState<{ id: string, answers: any, startTime: number } | null>(null);
   const [isAdminPreview, setIsAdminPreview] = useState(false);
   const [announcements, setAnnouncements] = useState<BlogPost[]>([]);
   const [candidateTab, setCandidateTab] = useState<'available' | 'history'>('available');
@@ -34,10 +34,8 @@ const App: React.FC = () => {
   const [dbConfigs, setDbConfigs] = useState<DatabaseConfig[]>([]);
 
   // Hooks
-  const { questions: fetchedQuestions, saveQuestion, deleteQuestion, refreshQuestions } = useQuestions();
+  const { fetchedQuestions, saveQuestion, deleteQuestion, refreshQuestions } = useQuestions();
   const { exams, saveExam, deleteExam, bulkDeleteExams, refreshExams } = useExams();
-  const { submissions, updateSubmission, bulkDeleteSubmissions, refreshSubmissions } = useSubmissions();
-  const { users, refreshUsers } = useUsers();
 
   const handleLogout = useCallback(async () => {
     await api.auth.logout();
@@ -70,10 +68,8 @@ const App: React.FC = () => {
     if (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) {
       refreshQuestions();
       refreshExams();
-      refreshSubmissions();
-      refreshUsers();
     }
-  }, [user, refreshQuestions, refreshExams, refreshSubmissions, refreshUsers]);
+  }, [user, refreshQuestions, refreshExams]);
 
   const handleBulkDeleteQuestions = async (ids: string[]) => {
     try {
@@ -143,6 +139,7 @@ const App: React.FC = () => {
 
   const handleDashboardClick = () => {
     setActiveExam(null); // Exit exam / return to list
+    setActiveSubmission(null);
     setIsAdminPreview(false);
     setCandidateTab('available'); // Reset candidate tab
     setSuperAdminViewKey(prev => prev + 1); // Reset SuperAdmin view
@@ -150,65 +147,34 @@ const App: React.FC = () => {
 
 
   const handleStartExam = async (exam: Exam) => {
-    // Check if questions are loaded. If not, fetched them.
-    if (!exam.questions || exam.questions.length === 0) {
-      try {
-        const fullExam = await api.exams.get(exam.id);
-        if (fullExam && fullExam.questions && fullExam.questions.length > 0) {
-          setActiveExam(fullExam);
-        } else {
-          addToast("Error: Exam has no questions.", "error");
-        }
-      } catch (e) {
-        addToast("Failed to load exam details.", "error");
+    try {
+      // 1. Start Attempt (Create/Resume Submission)
+      const session = await api.exams.startAttempt(exam.id);
+
+      // 2. Fetch full exam details if needed (ensure questions loaded)
+      let fullExam = exam;
+      if (!exam.questions || exam.questions.length === 0) {
+        fullExam = await api.exams.get(exam.id);
       }
-    } else {
-      setActiveExam(exam);
-    }
-  };
 
-  // Handlers for Admin Dashboard
-  const handleManualGrade = async (submissionId: string, questionId: string, result: QuestionResult) => {
-    const sub = submissions.find(s => s.id === submissionId);
-    if (!sub) return;
+      if (!fullExam.questions || fullExam.questions.length === 0) {
+        addToast("Error: Exam has no questions.", "error");
+        return;
+      }
 
-    const updatedResults = { ...sub.questionResults, [questionId]: result };
+      setActiveSubmission({
+        id: session.submissionId,
+        answers: session.answersDraft || {},
+        startTime: session.timeStarted
+      });
+      setActiveExam(fullExam);
 
-    // Recalculate Score
-    // Needs to fetch the exam to know points? 
-    // Ideally backend handles recalc, but for now we trust the frontend update logic or just save the result map.
-    // Simplest: Just update the result map and let backend or UI sum it up. 
-    // Wait, we need to update score in DB.
-    // Let's assume grading update logic is complex and done mostly client side in 'onManualGrade' before calling this?
-    // AdminDashboard's onManualGrade usually just updates the state. We need to save it.
+      if (session.resumed) {
+        addToast('Resumed existing exam session.', 'info');
+      }
 
-    let newScore = Object.values(updatedResults).reduce((acc, r: any) => acc + (r.score || 0), 0);
-
-    const newSub: Submission = {
-      ...sub,
-      questionResults: updatedResults,
-      score: newScore,
-      gradingStatus: GradingStatus.GRADED // Or partial? Assume manually graded means done.
-    };
-
-    await updateSubmission(newSub);
-    addToast('Grade updated', 'success');
-  };
-
-  const handleReleaseResults = async (examId: string) => {
-    // Find all submissions for this exam and update correct release field
-    // This is heavy. Ideally a backend endpoint: POST /api/exams/:id/release-results
-    // for now, we loop submissions on client (MVP).
-    const subs = submissions.filter(s => s.examId === examId);
-    await Promise.all(subs.map(s => updateSubmission({ ...s, resultsReleased: true })));
-    addToast('All results released for this exam', 'success');
-  };
-
-  const handleReleaseSingleSubmission = async (id: string) => {
-    const sub = submissions.find(s => s.id === id);
-    if (sub) {
-      await updateSubmission({ ...sub, resultsReleased: true });
-      addToast('Result released to candidate', 'success');
+    } catch (e) {
+      addToast("Failed to start exam.", "error");
     }
   };
 
@@ -234,8 +200,11 @@ const App: React.FC = () => {
       return <ExamInterface
         exam={activeExam}
         studentId={user!.id}
+        submissionId={activeSubmission?.id}
+        initialAnswers={activeSubmission?.answers}
+        initialStartTime={activeSubmission?.startTime}
         onSubmit={handleSubmitExam}
-        onCancel={() => { setActiveExam(null); setIsAdminPreview(false); }}
+        onCancel={() => { setActiveExam(null); setActiveSubmission(null); setIsAdminPreview(false); }}
         isAdminPreview={isAdminPreview}
       />;
     }
@@ -255,9 +224,7 @@ const App: React.FC = () => {
         return <AdminDashboard
           // Data Props
           exams={exams}
-          submissions={submissions}
-          users={users}
-          questionBank={fetchedQuestions}
+          questionBank={fetchedQuestions} // Rename to questionBank if needed or keep prop name matching
           templates={templates}
           systemSettings={{ aiEnabled: false } as any} // Placeholder for settings until API ready
           announcements={announcements}
@@ -266,23 +233,15 @@ const App: React.FC = () => {
           onSaveExam={saveExam}
           onDeleteExam={deleteExam}
           onBulkDeleteExams={bulkDeleteExams}
-          onBulkDeleteSubmissions={bulkDeleteSubmissions}
+          // Submissions/Users/Logs actions are now internal to AdminDashboard
 
           onAddToBank={saveQuestion}
-          onUpdateBankQuestion={(id, q) => saveQuestion(q)}
           onDeleteFromBank={deleteQuestion}
-
-          onManualGrade={handleManualGrade}
-          onReleaseResults={handleReleaseResults}
-          onReleaseSingleSubmission={handleReleaseSingleSubmission}
-          onReleaseAllDelayedResults={() => { }} // Placeholder or impl similar to ReleaseResults
-
-          onAIGradeSubmission={async () => { addToast('AI Grading not enabled', 'info'); }}
 
           onSaveTemplate={t => setTemplates(p => [...p, t])} // Local only for MVP
           onDeleteTemplate={id => setTemplates(p => p.filter(t => t.id !== id))}
 
-          onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); }}
+          onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); setActiveSubmission(null); }}
           onTogglePublish={handleTogglePublish}
           onBulkDeleteQuestions={handleBulkDeleteQuestions}
           onPurgeQuestions={handlePurgeQuestions}

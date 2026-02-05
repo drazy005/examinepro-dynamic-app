@@ -104,6 +104,10 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(exam)
     })),
+    startAttempt: async (examId: string): Promise<{ submissionId: string, answersDraft: any, timeStarted: number, resumed: boolean }> => withLoading(request<{ submissionId: string, answersDraft: any, timeStarted: number, resumed: boolean }>('/attempt/start', {
+      method: 'POST',
+      body: JSON.stringify({ examId })
+    })),
     // Deprecated save in favor of explicit create/update, keeping for backward compat if needed but usually removed
     save: async (exam: Exam): Promise<Exam> => withLoading(request<Exam>('/exams', {
       method: 'POST',
@@ -113,17 +117,28 @@ export const api = {
   },
 
   submissions: {
-    list: async (): Promise<Submission[]> => withLoading(request<Submission[]>('/submissions')),
+    list: async (page = 1, limit = 50): Promise<{ data: Submission[], pagination: any }> => withLoading(request<{ data: Submission[], pagination: any }>(`/submissions?page=${page}&limit=${limit}`)),
     listMyHistory: async (): Promise<Submission[]> => withLoading(request<Submission[]>('/submissions?mode=history')),
     save: async (sub: Submission): Promise<Submission> => withLoading(request<Submission>('/submissions', {
       method: 'POST',
       body: JSON.stringify(sub)
     })),
+    saveDraft: async (submissionId: string, answers: any): Promise<{ success: boolean; savedAt: number }> => request<{ success: boolean; savedAt: number }>('/submissions/draft', {
+      method: 'POST',
+      body: JSON.stringify({ submissionId, answers })
+    }),
     update: async (sub: Submission): Promise<Submission | null> => withLoading(request<Submission>(`/submissions/${sub.id}`, {
       method: 'PUT',
       body: JSON.stringify(sub)
     })),
-    delete: async (id: string) => withLoading(request(`/submissions/${id}`, { method: 'DELETE' }))
+    delete: async (id: string) => withLoading(request(`/submissions/${id}`, { method: 'DELETE' })),
+    // Admin Actions
+    bulkDelete: async (ids: string[]) => withLoading(request(`/submissions?ids=${ids.join(',')}`, { method: 'DELETE' })), // Assuming API supports this or we use a different endpoint
+    manualGrade: async (submissionId: string, questionId: string, result: any) => withLoading(request(`/submissions/${submissionId}/grade`, { method: 'POST', body: JSON.stringify({ questionId, result }) })),
+    releaseResultsForExam: async (examId: string) => withLoading(request(`/exams/${examId}/release`, { method: 'POST' })),
+    releaseSingleSubmission: async (submissionId: string) => withLoading(request(`/submissions/${submissionId}/release`, { method: 'POST' })),
+    releaseAllDelayedResults: async () => withLoading(request(`/submissions/release-all`, { method: 'POST' })),
+    aiGrade: async (submissionId: string) => withLoading(request(`/submissions/${submissionId}/ai-grade`, { method: 'POST' }))
   },
 
   questions: {
@@ -151,8 +166,8 @@ export const api = {
   },
 
   admin: {
-    getUsers: async (): Promise<User[]> => withLoading(request<User[]>('/admin/users')),
-    getLogs: async (): Promise<AuditLog[]> => withLoading(request<AuditLog[]>('/admin/logs')),
+    getUsers: async (page = 1, limit = 50): Promise<{ data: User[], pagination: any }> => withLoading(request<{ data: User[], pagination: any }>(`/admin/users?resource=users&page=${page}&limit=${limit}`)),
+    getLogs: async (page = 1, limit = 50): Promise<{ data: AuditLog[], pagination: any }> => withLoading(request<{ data: AuditLog[], pagination: any }>(`/admin/logs?resource=logs&page=${page}&limit=${limit}`)),
     getAnnouncements: async (): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements')),
     updateAnnouncements: async (posts: BlogPost[]): Promise<BlogPost[]> => withLoading(request<BlogPost[]>('/admin/announcements', {
       method: 'POST',

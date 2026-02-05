@@ -26,9 +26,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             settings.forEach(s => {
                 // Parse JSON for complex objects if needed, or keep as string
                 // We'll try to parse specific keys we know are JSON
-                if (s.key === 'dbConfigs' || s.key === 'apiKeys') {
+                if (s.key === 'dbConfigs' || s.key === 'apiKeys' || s.key === 'oauthConfig') {
                     if (isSuperAdmin) {
-                        try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = []; }
+                        try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = {}; } // Default to empty object/array
                     }
                     // If not superadmin, DO NOT include these keys
                 } else if (s.key === 'branding') {
