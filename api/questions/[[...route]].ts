@@ -7,34 +7,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { route } = req.query;
     // route is string[] | string | undefined
 
-    // Auth Check
     const cookies = parse(req.headers.cookie || '');
-    const token = cookies.auth_token;
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const user = authLib.verifyToken(token);
-    const role = user?.role as string;
+    const token = cookies.auth_token || req.headers.authorization?.split(' ')[1];
 
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+    let user;
+    try {
+        user = authLib.verifyToken(token);
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    if (!user) return res.status(401).json({ error: 'Invalid token' });
+
+    const role = user.role as string;
     // Strict Admin Check for ALL question operations
-    if (!user || (role !== 'ADMIN' && role !== 'SUPERADMIN')) {
+    if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
         return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // === ROUTE: /api/questions (List, Create, Delete Query/Purge) ===
+    // === 1. ROOT ROUTES: /api/questions ===
     if (!route || route.length === 0) {
 
         // GET: List
         if (req.method === 'GET') {
             try {
                 const questions = await db.question.findMany({
-                    orderBy: { createdAt: 'desc' }
+                    orderBy: { createdAt: 'desc' },
+                    include: { exam: { select: { title: true } } } // Nice to have exam title
                 });
                 return res.status(200).json(questions);
             } catch (e) {
+                console.error('Questions fetch error:', e);
                 return res.status(500).json({ error: 'Failed to fetch questions' });
             }
         }
 
-        // POST: Create Single
+        // POST: Create
         if (req.method === 'POST') {
             try {
                 const { type, text, options, correctAnswer, points, category, imageUrl } = req.body;
@@ -63,8 +73,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (mode === 'purge') {
                 const whereClause: any = {};
                 if (type && type !== 'ALL') whereClause.type = type;
-                const result = await db.question.deleteMany({ where: whereClause });
-                return res.status(200).json({ success: true, count: result.count });
+                await db.question.deleteMany({ where: whereClause });
+                return res.status(200).json({ success: true });
             }
 
             // Single Delete via Query
@@ -74,10 +84,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             return res.status(400).json({ error: 'Missing ID or Mode' });
         }
+
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // === ROUTE: /api/questions/batch ===
-    if (route[0] === 'batch') {
+    const actionOrId = route[0];
+
+    // === 2. BATCH ROUTES ===
+    if (actionOrId === 'batch') {
         // DELETE BATCH
         if (req.method === 'DELETE') {
             const { ids } = req.body;
@@ -111,10 +125,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // === ROUTE: /api/questions/[id] ===
-    const id = route[0];
+    // === 3. ID ROUTES ===
+    const id = actionOrId;
 
-    // PUT: Update
     if (req.method === 'PUT') {
         try {
             const { type, text, options, correctAnswer, points, category, imageUrl } = req.body;
@@ -128,7 +141,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
-    // DELETE: Delete Single
     if (req.method === 'DELETE') {
         try {
             await db.question.delete({ where: { id } });
