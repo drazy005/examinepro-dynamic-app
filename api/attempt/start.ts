@@ -1,7 +1,7 @@
 
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../../_lib/prisma';
-import { verifyToken } from '../../_lib/auth';
+import { db } from '../_lib/db';
+import { verifyToken } from '../_lib/auth';
 import { GradingStatus } from '@prisma/client'; // Assuming types generated
 
 export default async function handleAttemptStart(req: VercelRequest, res: VercelResponse) {
