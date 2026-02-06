@@ -64,6 +64,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   const { users } = useUsers(); // Assuming useUsers provides a 'users' array
 
   // Local Data State with Pagination
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'submissions' | 'users' | 'questions' | 'analytics'>('overview');
+  const [isCreating, setIsCreating] = useState(false);
+  const [aiContext, setAiContext] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [submissionFilter, setSubmissionFilter] = useState('');
+  const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set());
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isSelectingQuestions, setIsSelectingQuestions] = useState(false); // For modal
+  const [creatingQuestionType, setCreatingQuestionType] = useState<QuestionType | null>(null); // If set, shows the creator
+
   const [submissionsData, setSubmissionsData] = useState<{ data: Submission[], total: number, page: number, totalPages: number }>({ data: [], total: 0, page: 1, totalPages: 0 });
   const [usersData, setUsersData] = useState<{ data: User[], total: number, page: number, totalPages: number }>({ data: [], total: 0, page: 1, totalPages: 0 });
   const [logsData, setLogsData] = useState<{ data: any[], total: number, page: number, totalPages: number }>({ data: [], total: 0, page: 1, totalPages: 0 });
@@ -110,17 +122,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
     }
   }, [activeTab]);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'submissions' | 'users' | 'questions' | 'analytics'>('overview');
-  const [isCreating, setIsCreating] = useState(false);
-  const [aiContext, setAiContext] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [submissionFilter, setSubmissionFilter] = useState('');
-  const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set());
-  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
-  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [isSelectingQuestions, setIsSelectingQuestions] = useState(false); // For modal
-  const [creatingQuestionType, setCreatingQuestionType] = useState<QuestionType | null>(null); // If set, shows the creator
+
+
+  // Helper functions for question management
+  const saveQuestion = async (q: Question) => {
+    if (q.id && onUpdateBankQuestion) {
+      onUpdateBankQuestion(q.id, q);
+    } else if (onAddToBank) {
+      onAddToBank(q);
+    }
+  };
+
+  const deleteQuestion = (id: string) => {
+    if (onDeleteFromBank) onDeleteFromBank(id);
+  };
 
   const handleBatchImport = async (importedQuestions: Partial<Question>[]) => {
     // In a real app we'd call the API: await api.questions.batchImport(importedQuestions);
@@ -386,9 +401,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
             <input type="text" placeholder="Search transcripts..." value={submissionFilter} onChange={e => setSubmissionFilter(e.target.value)} className="w-full md:max-w-md bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl font-black text-xs uppercase" />
             <div className="flex gap-4">
               {selectedSubIds.size > 0 && (
-                <button onClick={() => { onBulkDeleteSubmissions(Array.from(selectedSubIds)); setSelectedSubIds(new Set()); }} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg">Delete ({selectedSubIds.size})</button>
+                <button onClick={() => { handleBulkDeleteSubmissions(Array.from(selectedSubIds)); setSelectedSubIds(new Set()); }} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg">Delete ({selectedSubIds.size})</button>
               )}
-              <button onClick={onReleaseAllDelayedResults} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase">Release Delayed</button>
+              <button onClick={handleReleaseAllDelayedResults} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase">Release Delayed</button>
             </div>
           </div>
           <div className="bg-slate-50 dark:bg-slate-900 theme-rounded p-8 shadow-sm overflow-x-auto">
@@ -730,87 +745,92 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 </div>
               </div>
             )}
-            {activeTab === 'users' && (
-              <div className="px-4">
-                <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
-                  <h2 className="font-black text-2xl uppercase mb-8">Registered Users</h2>
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b">
-                        <th className="pb-4">Name</th>
-                        <th className="pb-4">Email</th>
-                        <th className="pb-4">Role</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                      {usersData.data.map(u => (
-                        <tr key={u.id} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td className="py-4 font-bold">{u.name}</td>
-                          <td className="py-4 text-slate-500">{u.email}</td>
-                          <td className="py-4"><span className="bg-slate-100 px-2 py-1 rounded text-[10px] uppercase font-black">{u.role}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          </div>
+        )}
 
-                  {/* Users Pagination */}
-                  <div className="flex justify-between items-center mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
-                    <button
-                      disabled={usersData.page === 1}
-                      onClick={() => fetchUsers(usersData.page - 1)}
-                      className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
-                    >Previous</button>
-                    <span className="text-xs font-bold text-slate-400">Page {usersData.page} of {usersData.totalPages || 1}</span>
-                    <button
-                      disabled={usersData.page >= usersData.totalPages}
-                      onClick={() => fetchUsers(usersData.page + 1)}
-                      className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
-                    >Next</button>
-                  </div>
-                </div>
-              </div>
+      {activeTab === 'users' && (
+        <div className="px-4">
+          <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm">
+            <h2 className="font-black text-2xl uppercase mb-8">Registered Users</h2>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b">
+                  <th className="pb-4">Name</th>
+                  <th className="pb-4">Email</th>
+                  <th className="pb-4">Role</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {usersData.data.map(u => (
+                  <tr key={u.id} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td className="py-4 font-bold">{u.name}</td>
+                    <td className="py-4 text-slate-500">{u.email}</td>
+                    <td className="py-4"><span className="bg-slate-100 px-2 py-1 rounded text-[10px] uppercase font-black">{u.role}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Users Pagination */}
+            <div className="flex justify-between items-center mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
+              <button
+                disabled={usersData.page === 1}
+                onClick={() => fetchUsers(usersData.page - 1)}
+                className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
+              >Previous</button>
+              <span className="text-xs font-bold text-slate-400">Page {usersData.page} of {usersData.totalPages || 1}</span>
+              <button
+                disabled={usersData.page >= usersData.totalPages}
+                onClick={() => fetchUsers(usersData.page + 1)}
+                className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
+              >Next</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'analytics' && (
-              <AnalyticsDashboard
-                exams={exams}
-                submissions={submissionsData.data} // Analytics ideally needs its own non-paginated fetch or summary endpoint
-                users={usersData.data}
-                onPreviewExam={onPreviewExam}
-                onViewSubmission={(sub, exam) => setSelectedSubmission({ sub, exam })}
-              />
-            )}
+        <AnalyticsDashboard
+          exams={exams}
+          submissions={submissionsData.data} // Analytics ideally needs its own non-paginated fetch or summary endpoint
+          users={usersData.data}
+          onPreviewExam={onPreviewExam}
+          onViewSubmission={(sub, exam) => setSelectedSubmission({ sub, exam })}
+        />
+      )}
 
-            {selectedSubmission && (
-              <SubmissionDetailModal
-                submission={selectedSubmission.sub}
-                exam={selectedSubmission.exam}
-                onClose={() => setSelectedSubmission(null)}
-                systemSettings={systemSettings}
-                isAdmin={true}
-                onManualGrade={(qId, res) => {
-                  // Adapt the call to the prop
-                  if (selectedSubmission) {
-                    onManualGrade(selectedSubmission.sub.id, qId, res);
-                    // We don't manually update local state here anymore because the parent handles the definitive update
-                    // and passes back the new submissions list.
-                    setSelectedSubmission(null); // Close to refresh/avoid stale state or keep open handled by state? 
-                    // Simple approach: Close modal on save.
-                    addToast('Grade saved', 'success');
-                  }
-                }}
-              />
-            )
+      {selectedSubmission && (
+        <SubmissionDetailModal
+          submission={selectedSubmission.sub}
+          exam={selectedSubmission.exam}
+          onClose={() => setSelectedSubmission(null)}
+          systemSettings={systemSettings}
+          isAdmin={true}
+          onManualGrade={(qId, res) => {
+            // Adapt the call to the prop
+            if (selectedSubmission) {
+              handleManualGrade(selectedSubmission.sub.id, qId, res);
+              // We don't manually update local state here anymore because the parent handles the definitive update
+              // and passes back the new submissions list.
+              setSelectedSubmission(null); // Close to refresh/avoid stale state or keep open handled by state? 
+              // Simple approach: Close modal on save.
+              addToast('Grade saved', 'success');
             }
+          }}
+        />
+      )
+      }
 
-            {
-              isImporting && (
-                <BulkImportModal
-                  onImport={handleBatchImport}
-                  onClose={() => setIsImporting(false)}
-                />
-              )
-            }
-          </div >
-        );
+      {
+        isImporting && (
+          <BulkImportModal
+            onImport={handleBatchImport}
+            onClose={() => setIsImporting(false)}
+          />
+        )
+      }
+    </div >
+  );
 });
 
-      export default AdminDashboard;
+export default AdminDashboard;
