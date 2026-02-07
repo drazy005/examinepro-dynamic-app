@@ -34,7 +34,7 @@ const App: React.FC = () => {
   const [dbConfigs, setDbConfigs] = useState<DatabaseConfig[]>([]);
 
   // Hooks
-  const { fetchedQuestions, saveQuestion, deleteQuestion, refreshQuestions } = useQuestions();
+  const { questions: fetchedQuestions, saveQuestion, deleteQuestion, refreshQuestions } = useQuestions();
   const { exams, saveExam, deleteExam, bulkDeleteExams, refreshExams } = useExams();
 
   const handleLogout = useCallback(async () => {

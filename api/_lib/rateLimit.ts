@@ -1,17 +1,9 @@
 
-import { db } from './db.js';
+import { db } from './db';
 
 export async function checkRateLimit(identifier: string, limit: number, windowSeconds: number): Promise<boolean> {
     const now = new Date();
-    const windowStart = new Date(now.getTime() - windowSeconds * 1000);
-
-    // 1. Transaction to sanitize and increment
-    // Note: Prisma doesn't have "increment if exists else create" in one atomic 'upsert' with condition easily for this logic without raw SQL,
-    // but we can use a simpler approach: 
-    // Find, check expiry.
-
-    // Cleanup old (optional optimization, maybe do probabilitically or via cron, but for now simple check)
-    // We won't delete widely to avoid lock contention.
+    // const windowStart = new Date(now.getTime() - windowSeconds * 1000); // Unused
 
     try {
         const entry = await db.rateLimit.findUnique({

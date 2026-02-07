@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
-import { db } from './db.js';
-import { SystemSettings, SmtpConfig } from '../../services/types.js'; // Ensure correct import path or redefine type if used in backend only context
+import { db } from './db';
+import { SystemSettings, SmtpConfig } from '../../services/types';
 
 // Backend-only interface for clarity if types sharing is complex
 interface LocalSmtpConfig {

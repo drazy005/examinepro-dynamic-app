@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db';
-import { verifyToken } from '../_lib/auth';
+import { authLib } from '../_lib/auth';
 
 export default async function handleAttemptStart(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
@@ -9,7 +9,8 @@ export default async function handleAttemptStart(req: VercelRequest, res: Vercel
 
     try {
         const token = req.headers.authorization?.split(' ')[1];
-        const user = verifyToken(token);
+        const user = token ? authLib.verifyToken(token) : null;
+
         if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
         const { examId } = req.body;
