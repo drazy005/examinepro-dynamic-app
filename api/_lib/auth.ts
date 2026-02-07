@@ -1,6 +1,7 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { serialize } from 'cookie';
+import * as jwt from 'jsonwebtoken';
+import * as bcrypt from 'bcryptjs';
+import * as cookie from 'cookie';
+const { serialize } = cookie;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-do-not-use-in-prod';
 const TOKEN_NAME = 'auth_token';
@@ -13,23 +14,32 @@ export interface TokenPayload {
 export const authLib = {
     // Hash password
     hashPassword: async (password: string) => {
-        return await bcrypt.hash(password, 10);
+        // Handle CJS/ESM interop
+        const hashFn = bcrypt.hash || (bcrypt as any).default?.hash;
+        if (!hashFn) throw new Error('bcrypt.hash is not available');
+        return await hashFn(password, 10);
     },
 
     // Verify password
     verifyPassword: async (password: string, hash: string) => {
-        return await bcrypt.compare(password, hash);
+        const compareFn = bcrypt.compare || (bcrypt as any).default?.compare;
+        if (!compareFn) throw new Error('bcrypt.compare is not available');
+        return await compareFn(password, hash);
     },
 
     // Sign JWT
     signToken: (payload: TokenPayload) => {
-        return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' }); // 7 days session
+        const signFn = jwt.sign || (jwt as any).default?.sign;
+        if (!signFn) throw new Error('jwt.sign is not available');
+        return signFn(payload, JWT_SECRET, { expiresIn: '7d' }); // 7 days session
     },
 
     // Verify JWT
     verifyToken: (token: string): TokenPayload | null => {
         try {
-            return jwt.verify(token, JWT_SECRET) as TokenPayload;
+            const verifyFn = jwt.verify || (jwt as any).default?.verify;
+            if (!verifyFn) throw new Error('jwt.verify is not available');
+            return verifyFn(token, JWT_SECRET) as TokenPayload;
         } catch (e) {
             return null;
         }
