@@ -1,5 +1,5 @@
 
-import { db } from './db';
+import { db } from './db.js';
 
 export async function checkRateLimit(identifier: string, limit: number, windowSeconds: number): Promise<boolean> {
     const now = new Date();
