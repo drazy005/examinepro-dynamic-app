@@ -1,20 +1,24 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../_lib/db';
-import { authLib } from '../_lib/auth';
-import { emailLib } from '../_lib/email';
+import { db } from '../_lib/db.js';
+import { authLib } from '../_lib/auth.js';
+import { emailLib } from '../_lib/email.js';
 import { parse } from 'cookie';
 
 import crypto from 'crypto';
-import { checkRateLimit } from '../_lib/rateLimit';
+import { checkRateLimit } from '../_lib/rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query;
 
+    console.log(`[Auth] Request received for action: ${action}`);
+
     if (!action || typeof action !== 'string') {
+        console.warn('[Auth] Invalid action');
         return res.status(400).json({ error: 'Invalid action' });
     }
 
     try {
+        console.log(`[Auth] Dispatching action: ${action}`);
         switch (action) {
             case 'login': return await handleLogin(req, res);
             case 'register': return await handleRegister(req, res);
@@ -22,10 +26,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'forgot': return await handleForgot(req, res);
             case 'reset': return await handleReset(req, res);
             case 'logout': return await handleLogout(req, res);
-            default: return res.status(404).json({ error: 'Endpoint not found' });
+            default:
+                console.warn(`[Auth] Unknown action: ${action}`);
+                return res.status(404).json({ error: 'Endpoint not found' });
         }
     } catch (error: any) {
         console.error(`Auth Error [${action}]:`, error);
+        // Log full stack
+        if (error.stack) console.error(error.stack);
         return res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 }

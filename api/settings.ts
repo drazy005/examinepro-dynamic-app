@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from './_lib/db';
-import { authLib } from './_lib/auth';
+import { db } from './_lib/db.js';
+import { authLib } from './_lib/auth.js';
 import { parse } from 'cookie';
 
 

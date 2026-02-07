@@ -1,9 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from './_lib/db';
-import { authLib } from './_lib/auth';
+import { db } from './_lib/db.js';
+import { authLib } from './_lib/auth.js';
 import { parse } from 'cookie';
-import { sanitize } from '../services/securityService';
-import { checkRateLimit } from './_lib/rateLimit';
+import { checkRateLimit } from './_lib/rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
@@ -47,7 +46,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await db.auditLog.create({
             data: {
                 action: String(action).substring(0, 50),
-                // Prepend severity to details since AuditLog table lacks 'severity' column
                 details: `[${(['INFO', 'WARN', 'CRITICAL'].includes(severity) ? severity : 'INFO')}] ${String(details).substring(0, 480)}`,
                 timestamp: new Date(),
                 user: userId ? { connect: { id: userId } } : undefined
