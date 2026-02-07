@@ -39,9 +39,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     include: { exam: { select: { title: true } } } // Nice to have exam title
                 });
                 return res.status(200).json(questions);
-            } catch (e) {
+            } catch (e: any) {
                 console.error('Questions fetch error:', e);
-                return res.status(500).json({ error: 'Failed to fetch questions' });
+                return res.status(500).json({ error: `Failed to fetch questions: ${e.message}` });
             }
         }
 
@@ -61,8 +61,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                 });
                 return res.status(200).json(q);
-            } catch (e) {
-                return res.status(500).json({ error: 'Failed to create question' });
+            } catch (e: any) {
+                return res.status(500).json({ error: `Failed to create question: ${e.message}` });
             }
         }
 
@@ -137,8 +137,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 data: { type, text, options, correctAnswer, points, category, imageUrl }
             });
             return res.status(200).json(updated);
-        } catch (e) {
-            return res.status(500).json({ error: 'Failed to update question' });
+        } catch (e: any) {
+            return res.status(500).json({ error: `Failed to update question: ${e.message}` });
         }
     }
 
@@ -146,8 +146,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
             await db.question.delete({ where: { id } });
             return res.status(200).json({ success: true });
-        } catch (e) {
-            return res.status(500).json({ error: 'Failed to delete question' });
+        } catch (e: any) {
+            return res.status(500).json({ error: `Failed to delete question: ${e.message}` });
         }
     }
 

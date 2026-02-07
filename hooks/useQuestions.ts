@@ -12,9 +12,11 @@ export const useQuestions = () => {
         try {
             const data = await api.questions.list();
             setQuestions(data);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            addToast('Failed to load questions', 'error');
+            // Show specific error message from API if available
+            const msg = e.message || 'Unknown error';
+            addToast(`Failed to load questions: ${msg}`, 'error');
         }
     }, [addToast]);
 
@@ -38,8 +40,8 @@ export const useQuestions = () => {
             });
             addToast('Question saved', 'success');
             return saved;
-        } catch (e) {
-            addToast('Failed to save question', 'error');
+        } catch (e: any) {
+            addToast(`Failed to save question: ${e.message}`, 'error');
             throw e;
         }
     };
@@ -49,8 +51,8 @@ export const useQuestions = () => {
             await api.questions.delete(id);
             setQuestions(prev => prev.filter(q => q.id !== id));
             addToast('Question deleted', 'success');
-        } catch (e) {
-            addToast('Failed to delete question', 'error');
+        } catch (e: any) {
+            addToast(`Failed to delete question: ${e.message}`, 'error');
         }
     };
 
