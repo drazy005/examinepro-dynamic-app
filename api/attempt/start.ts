@@ -1,8 +1,6 @@
-
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db';
 import { verifyToken } from '../_lib/auth';
-import { GradingStatus } from '@prisma/client'; // Assuming types generated
 
 export default async function handleAttemptStart(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
@@ -24,21 +22,12 @@ export default async function handleAttemptStart(req: VercelRequest, res: Vercel
             return res.status(403).json({ error: 'Exam is not available' });
         }
 
-        // 2. Check for existing UNGRADED or incomplete submission
-        // We assume if it's ungraded, it's an active attempt.
+        // 2. Check for existing UNGRADED attempt
         const existing = await db.submission.findFirst({
             where: {
                 examId: examId,
-                studentId: user.userId,
-                gradingStatus: 'UNGRADED'
-                // We might also check if 'submittedAt' is in the future? No, submittedAt is usually set when finalized.
-                // If we use 'resultReleased' or 'graded' to mark completion.
-                // Let's rely on 'gradingStatus' being UNGRADED as "In Progress" or "Submitted but not graded".
-                // Currently, explicit submit changes status?
-                // If user just closed browser, status is UNGRADED.
-                // We should check if they explicitly "Finished".
-                // The 'Submission' model might need an 'isFinal' flag or we use 'score' or 'graded'.
-                // For now, if they have an active submission, we return it to RESUME.
+                userId: user.userId,
+                status: 'UNGRADED'
             }
         });
 
@@ -46,8 +35,8 @@ export default async function handleAttemptStart(req: VercelRequest, res: Vercel
             // Resume
             return res.status(200).json({
                 submissionId: existing.id,
-                answersDraft: existing.answersDraft || existing.answers || {}, // Resume from draft or final answers if present
-                timeStarted: existing.timeStarted,
+                answersDraft: existing.answersDraft || existing.answers || {},
+                timeStarted: existing.submittedAt.getTime(),
                 resumed: true
             });
         }
@@ -56,30 +45,23 @@ export default async function handleAttemptStart(req: VercelRequest, res: Vercel
         const newSubmission = await db.submission.create({
             data: {
                 examId,
-                studentId: user.userId,
-                examVersion: exam.version,
+                userId: user.userId,
                 answers: {},
                 answersDraft: {},
                 questionResults: {},
                 score: 0,
-                rawScore: 0,
-                negativeDeduction: 0,
-                latePenaltyDeduction: 0,
                 graded: false,
-                gradingStatus: 'UNGRADED',
-                submittedAt: 0, // Not submitted yet. Or use now? 
-                // If we use 0, lists might sort weirdly.
-                // Let's use Date.now() as creation time, but 'resultsReleased' is false.
-                // Ideally we have 'startedAt'.
-                timeStarted: Date.now(),
-                resultsReleased: false
+                status: 'UNGRADED',
+                submittedAt: new Date(),
+                resultsReleased: false,
+                timeSpentMs: 0
             }
         });
 
         return res.status(200).json({
             submissionId: newSubmission.id,
             answersDraft: {},
-            timeStarted: newSubmission.timeStarted,
+            timeStarted: newSubmission.submittedAt.getTime(),
             resumed: false
         });
 

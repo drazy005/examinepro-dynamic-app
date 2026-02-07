@@ -1,11 +1,11 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../_lib/db.js';
-import { authLib } from '../_lib/auth.js';
-import { emailLib } from '../_lib/email.js';
+import { db } from '../_lib/db';
+import { authLib } from '../_lib/auth';
+import { emailLib } from '../_lib/email';
 import { parse } from 'cookie';
 
 import crypto from 'crypto';
-import { checkRateLimit } from '../_lib/rateLimit.js';
+import { checkRateLimit } from '../_lib/rateLimit';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query;
