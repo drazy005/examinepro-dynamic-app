@@ -11,7 +11,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = cookies.auth_token || req.headers.authorization?.split(' ')[1];
 
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    const user = authLib.verifyToken(token);
+
+    let user;
+    try {
+        user = authLib.verifyToken(token);
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
     const role = user.role as string;
@@ -28,16 +35,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     // Candidate View
                     const mySubmissions = await db.submission.findMany({
                         where: { userId: user.userId },
-                        orderBy: { submittedAt: 'desc' }
+                        orderBy: { submittedAt: 'desc' },
+                        include: {
+                            exam: { select: { title: true } }
+                        }
                     });
-                    return res.status(200).json(mySubmissions);
+                    // Map to frontend interface if needed (status -> gradingStatus)
+                    const mapped = mySubmissions.map(s => ({
+                        ...s,
+                        gradingStatus: s.status // Map Prisma 'status' to frontend 'gradingStatus'
+                    }));
+                    return res.status(200).json(mapped);
                 }
 
                 // Admin View
                 if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
-
-                // Check for single IDs bulk fetch? Not typical in this app's pattern, 
-                // but checking for other query params...
 
                 const page = Number(req.query.page) || 1;
                 const limit = Number(req.query.limit) || 50;
@@ -47,14 +59,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     db.submission.findMany({
                         skip,
                         take: limit,
-                        include: { user: { select: { name: true, email: true } } },
+                        include: {
+                            user: { select: { name: true, email: true } },
+                            exam: { select: { title: true } }
+                        },
                         orderBy: { submittedAt: 'desc' }
                     }),
                     db.submission.count()
                 ]);
 
+                const mappedSubmissions = submissions.map(s => ({
+                    ...s,
+                    gradingStatus: s.status
+                }));
+
                 return res.status(200).json({
-                    data: submissions,
+                    data: mappedSubmissions,
                     pagination: {
                         total,
                         page,
@@ -108,7 +128,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         answers,
                         questionResults,
                         score: totalScore,
-                        timeSpentMs,
+                        timeSpentMs: Number(timeSpentMs) || 0, // Ensure int
                         status: requiresManualGrading ? 'PENDING_MANUAL_REVIEW' : 'GRADED',
                         graded: !requiresManualGrading,
                         resultsReleased: exam.resultRelease === 'INSTANT',
@@ -116,7 +136,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                 });
 
-                return res.status(200).json(submission);
+                return res.status(200).json({ ...submission, gradingStatus: submission.status });
             } catch (e) {
                 console.error('Submission error:', e);
                 return res.status(500).json({ error: 'Failed to submit exam' });
@@ -168,11 +188,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
         try {
-            // Release all where resultRelease is DELAYED? Or simply all unreleased?
-            // Usually this implies 'scheduled' exams that reached their time.
-            // For now, simpler implementation:
             await db.submission.updateMany({
-                where: { resultsReleased: false }, // Dangerous? Assuming Intent.
+                where: { resultsReleased: false },
                 data: { resultsReleased: true }
             });
             return res.status(200).json({ success: true });
@@ -207,18 +224,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (!submission) return res.status(404).json({ error: 'Submission not found' });
                 if (submission.userId !== user.userId && !isAdmin) return res.status(403).json({ error: 'Access denied' });
 
+                const mapped = { ...submission, gradingStatus: submission.status };
+
                 if (!isAdmin && !submission.resultsReleased) {
                     const sanitizedSubmission = {
-                        ...submission,
+                        ...mapped,
                         exam: {
-                            ...submission.exam,
-                            questions: submission.exam.questions.map(q => ({ ...q, correctAnswer: undefined }))
+                            ...mapped.exam,
+                            questions: mapped.exam.questions.map(q => ({ ...q, correctAnswer: undefined }))
                         },
                         questionResults: undefined
                     };
                     return res.status(200).json(sanitizedSubmission);
                 }
-                return res.status(200).json(submission);
+                return res.status(200).json(mapped);
             } catch (e) {
                 return res.status(500).json({ error: 'Failed to fetch submission' });
             }
@@ -233,7 +252,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 delete updates.userId;
                 delete updates.examId;
                 const updated = await db.submission.update({ where: { id: submissionId }, data: updates });
-                return res.status(200).json(updated);
+                return res.status(200).json({ ...updated, gradingStatus: updated.status });
             } catch (e) {
                 return res.status(500).json({ error: 'Failed to update' });
             }
@@ -254,16 +273,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
         try {
-            const { questionId, result } = req.body; // result: { score, feedback, isCorrect }
+            const { questionId, result } = req.body;
             const submission = await db.submission.findUnique({ where: { id: submissionId } });
             if (!submission) return res.status(404).json({ error: 'Submission not found' });
 
             const currentResults: any = submission.questionResults || {};
             currentResults[questionId] = result;
 
-            // Re-calc score
             const newScore = Object.values(currentResults).reduce((acc: number, r: any) => acc + (r.score || 0), 0);
-            const allGraded = Object.values(currentResults).every((r: any) => r.isCorrect !== undefined); // Simple check
+            const allGraded = Object.values(currentResults).every((r: any) => r.isCorrect !== undefined);
 
             await db.submission.update({
                 where: { id: submissionId },
@@ -299,8 +317,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (subRoute === 'ai-grade') {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
-        // Placeholder for AI grading logic
-        return res.status(501).json({ error: 'AI Grading not implemented in this refactor yet' });
+        return res.status(501).json({ error: 'AI Grading not implemented' });
     }
 
     return res.status(404).json({ error: 'Not found' });
