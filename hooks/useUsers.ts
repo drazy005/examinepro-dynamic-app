@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { User } from '../services/types';
 import { api } from '../services/api';
@@ -11,8 +10,10 @@ export const useUsers = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const usersData = await api.admin.getUsers();
-        setUsers(usersData);
+        const response: any = await api.admin.getUsers();
+        // Handle both direct array and paginated response { data: [] }
+        const usersList = Array.isArray(response) ? response : (response.data || []);
+        setUsers(usersList as User[]);
       } catch (e) {
         addToast('Failed to load user list.', 'error');
       }
@@ -22,8 +23,9 @@ export const useUsers = () => {
 
   const refreshUsers = async () => {
     try {
-      const usersData = await api.admin.getUsers();
-      setUsers(usersData);
+      const response: any = await api.admin.getUsers();
+      const usersList = Array.isArray(response) ? response : (response.data || []);
+      setUsers(usersList as User[]);
     } catch (e) {
       // Silent error
     }
