@@ -83,43 +83,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   // Fetch Data Effects
-  const fetchSubmissions = async (page = 1) => {
+  const fetchSubmissions = async (page = 1, silent = false) => {
     setIsLoadingData(true);
     try {
       const response = await api.submissions.list({ page, limit: 20 });
       const { data, pagination } = 'data' in response ? response : { data: response as Submission[], pagination: { total: 0, page: 1, totalPages: 1 } };
       setSubmissionsData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
-    } catch (e) { addToast("Failed to load submissions", "error"); }
+    } catch (e) { if (!silent) addToast("Failed to load submissions", "error"); }
     setIsLoadingData(false);
   };
 
-  const fetchUsers = async (page = 1) => {
+  const fetchUsers = async (page = 1, silent = false) => {
     setIsLoadingData(true);
     try {
       const { data, pagination } = await api.admin.users(page, 20);
       setUsersData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
-    } catch (e) { addToast("Failed to load users", "error"); }
+    } catch (e) { if (!silent) addToast("Failed to load users", "error"); }
     setIsLoadingData(false);
   };
 
-  const fetchLogs = async (page = 1) => {
+  const fetchLogs = async (page = 1, silent = false) => {
     setIsLoadingData(true);
     try {
       const { data, pagination } = await api.admin.logs(page, 20);
       setLogsData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
-    } catch (e) { addToast("Failed to load logs", "error"); }
+    } catch (e) { if (!silent) addToast("Failed to load logs", "error"); }
     setIsLoadingData(false);
   };
 
   // Initial Fetch based on Tab
   React.useEffect(() => {
-    if (activeTab === 'submissions') fetchSubmissions(1);
-    if (activeTab === 'users') fetchUsers(1);
-    // if (activeTab === 'logs') fetchLogs(1); // logs tab missing in UI currently?
+    if (activeTab === 'submissions') fetchSubmissions(1, true);
+    if (activeTab === 'users') fetchUsers(1, true);
+    // if (activeTab === 'logs') fetchLogs(1, true); 
     if (activeTab === 'overview') {
       // fetch simple counts or just fetch page 1 of each to get 'total'
-      fetchSubmissions(1);
-      fetchUsers(1);
+      fetchSubmissions(1, true); // Silent
+      fetchUsers(1, true); // Silent
     }
   }, [activeTab]);
 
