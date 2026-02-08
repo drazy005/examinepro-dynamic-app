@@ -189,31 +189,19 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
 async function handleMe(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-    console.log('[Auth-Me] Headers:', JSON.stringify(req.headers));
     const cookies = parse(req.headers.cookie || '');
-    console.log('[Auth-Me] Cookies parsed:', JSON.stringify(cookies));
-
     const token = cookies.auth_token;
-    if (!token) {
-        console.warn('[Auth-Me] No token found in cookies');
-        return res.status(401).json({ error: 'No session' });
-    }
+    if (!token) return res.status(401).json({ error: 'No session' });
 
     const payload = authLib.verifyToken(token);
-    if (!payload) {
-        console.warn('[Auth-Me] Token verification failed');
-        return res.status(401).json({ error: 'Invalid token' });
-    }
+    if (!payload) return res.status(401).json({ error: 'Invalid token' });
 
     const user = await db.user.findUnique({
         where: { id: payload.userId },
         select: { id: true, email: true, name: true, role: true, isVerified: true }
     });
 
-    if (!user) {
-        console.warn('[Auth-Me] User not found (DB)');
-        return res.status(401).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(401).json({ error: 'User not found' });
     return res.status(200).json(user);
 }
 

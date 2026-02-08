@@ -166,10 +166,21 @@ const App: React.FC = () => {
       // 1. Start Attempt (Create/Resume Submission)
       const session = await api.exams.start(exam.id);
 
-      // 2. Fetch full exam details if needed (ensure questions loaded)
-      let fullExam = exam;
-      if (!exam.questions || exam.questions.length === 0) {
-        fullExam = await api.exams.get(exam.id);
+      // 2. Use the exam returned by the session if available (it contains questions)
+      let fullExam = (session as any).exam || exam;
+
+      // Fallback: Fetch full exam details if questions are still missing
+      // Note: Admin preview fetched it above. Candidate start fetched it via session.
+      if (!fullExam.questions || fullExam.questions.length === 0) {
+        console.log("Fetching full exam details separately (fallback)...");
+        try {
+          const fetched = await api.exams.get(exam.id);
+          if (fetched && fetched.questions && fetched.questions.length > 0) {
+            fullExam = fetched;
+          }
+        } catch (err) {
+          console.error("Fallback fetch failed", err);
+        }
       }
 
       if (!fullExam.questions || fullExam.questions.length === 0) {
@@ -262,7 +273,16 @@ const App: React.FC = () => {
           onSaveTemplate={t => setTemplates(p => [...p, t])} // Local only for MVP
           onDeleteTemplate={id => setTemplates(p => p.filter(t => t.id !== id))}
 
-          onPreviewExam={e => { setActiveExam(e); setIsAdminPreview(true); setActiveSubmission(null); }}
+          onPreviewExam={async e => {
+            try {
+              const fullExam = await api.exams.get(e.id);
+              setActiveExam(fullExam);
+              setIsAdminPreview(true);
+              setActiveSubmission(null);
+            } catch (err) {
+              addToast("Failed to load exam for preview", "error");
+            }
+          }}
           onTogglePublish={handleTogglePublish}
           onBulkDeleteQuestions={handleBulkDeleteQuestions}
           onPurgeQuestions={handlePurgeQuestions}
