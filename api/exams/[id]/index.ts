@@ -69,16 +69,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
         if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
         try {
-            const updates = req.body;
-            delete updates.id;
-            delete updates.createdAt;
+            const { id: _id, createdAt: _created, questions, ...scalars } = req.body;
+
+            // Prepare update data
+            const updateData: any = { ...scalars };
+
+            // Handle Questions Update (Replace Strategy)
+            if (questions && Array.isArray(questions)) {
+                updateData.questions = {
+                    deleteMany: {}, // Remove old questions
+                    create: questions.map((q: any) => ({
+                        text: q.text,
+                        type: q.type,
+                        options: q.options || [],
+                        correctAnswer: q.correctAnswer,
+                        points: q.points || 1,
+                        explanation: q.explanation
+                    }))
+                };
+            }
+
             const updated = await db.exam.update({
                 where: { id },
-                data: { ...updates }
+                data: updateData
             });
             return res.status(200).json(updated);
-        } catch (e) {
-            return res.status(500).json({ error: 'Update failed' });
+        } catch (e: any) {
+            console.error("Exam Update Error:", e);
+            return res.status(500).json({ error: 'Update failed: ' + e.message });
         }
     }
 
