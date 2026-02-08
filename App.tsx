@@ -49,13 +49,30 @@ const App: React.FC = () => {
       try {
         const currentUser = await api.auth.me();
         if (currentUser) {
-          setUser(currentUser);
-          const announcementsData = await api.admin.getAnnouncements();
+          // Prevent unnecessary re-renders if user data is same
+          setUser(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(currentUser)) return prev;
+            return currentUser;
+          });
+          const announcementsData = await api.admin.announcements.list();
           setAnnouncements(announcementsData);
           refreshSettings(); // Sync settings (including superadmin keys if applicable)
+        } else {
+          setUser(null);
         }
-      } catch (e) {
-        setUser(null);
+      } catch (e: any) {
+        // Only logout on Auth errors, not network/server errors
+        const msg = e.message || '';
+        if (msg.includes('Unauthorized') || msg.includes('Forbidden') || msg.includes('401') || msg.includes('403')) {
+          setUser(null);
+        } else {
+          console.error("Session check failed (network/server):", e);
+          // Keep loading false, but don't logout user if they were logged in? 
+          // Actually if we don't know, maybe best to stay put or retry?
+          // For now, let's assume if me() fails, we might be offline. 
+          // If we were already logged in, keep it? 
+          // But valid token might be gone.
+        }
       } finally {
         setIsLoading(false);
         initializeCspMonitoring();
@@ -73,11 +90,7 @@ const App: React.FC = () => {
 
   const handleBulkDeleteQuestions = async (ids: string[]) => {
     try {
-      await fetch('/api/questions/batch', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids })
-      });
+      await api.questions.bulkDelete(ids);
       refreshQuestions();
       addToast('Questions deleted', 'success');
     } catch (e) {
@@ -87,6 +100,7 @@ const App: React.FC = () => {
 
   const handlePurgeQuestions = async (type: string) => {
     try {
+      // Manual fetch for purge as it's a specific admin action not in generic api wrapper yet
       await fetch(`/api/questions?mode=purge&type=${type || 'ALL'}`, {
         method: 'DELETE'
       });
@@ -99,12 +113,17 @@ const App: React.FC = () => {
 
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser);
-    api.admin.getAnnouncements().then(setAnnouncements);
+    api.admin.announcements.list().then(setAnnouncements);
   };
 
   const handleSubmitExam = async (partialSub: Partial<Submission>) => {
     try {
-      await api.submissions.save(partialSub as Submission);
+      if (partialSub.id) {
+        await api.submissions.update(partialSub.id, partialSub);
+      } else {
+        // Fallback or error if no ID
+        await api.submissions.create(partialSub);
+      }
       addToast('Exam submitted successfully!', 'success');
       setActiveExam(null);
     } catch (e) {
@@ -114,7 +133,7 @@ const App: React.FC = () => {
 
   const handleAnnouncementUpdate = async (posts: BlogPost[]) => {
     try {
-      const updated = await api.admin.updateAnnouncements(posts);
+      const updated = await api.admin.announcements.create(posts);
       setAnnouncements(updated);
       addToast('Announcements updated!', 'success');
     } catch (e) {
@@ -124,14 +143,10 @@ const App: React.FC = () => {
 
   const handleTogglePublish = async (id: string, published: boolean) => {
     try {
-      // Use update instead of save for existing exams to prevent "status" errors
-      const currentExam = exams.find(e => e.id === id);
-      if (currentExam) {
-        // Only send the field we want to update to avoid triggering full exam re-creation/question replacement
-        await api.exams.update({ id, published } as any);
-        addToast(`Exam ${published ? 'Published' : 'Hidden'}`, 'success');
-        refreshExams(); // Update local list
-      }
+      // Corrected: separate id and data arguments
+      await api.exams.update(id, { published });
+      addToast(`Exam ${published ? 'Published' : 'Hidden'}`, 'success');
+      refreshExams(); // Update local list
     } catch (e) {
       addToast('Failed to update status', 'error');
     }
@@ -149,7 +164,7 @@ const App: React.FC = () => {
   const handleStartExam = async (exam: Exam) => {
     try {
       // 1. Start Attempt (Create/Resume Submission)
-      const session = await api.exams.startAttempt(exam.id);
+      const session = await api.exams.start(exam.id);
 
       // 2. Fetch full exam details if needed (ensure questions loaded)
       let fullExam = exam;
@@ -162,14 +177,20 @@ const App: React.FC = () => {
         return;
       }
 
+      // Ensure session object has expected properties. 
+      // If api.exams.start returns { exam, startTime }, we might need to fetch submission separately?
+      // Check return type of api.exams.start in api.ts
+
+      const subId = (session as any).submissionId || (session as any).id;
+
       setActiveSubmission({
-        id: session.submissionId,
-        answers: session.answersDraft || {},
-        startTime: session.timeStarted
+        id: subId,
+        answers: (session as any).answersDraft || {},
+        startTime: session.startTime
       });
       setActiveExam(fullExam);
 
-      if (session.resumed) {
+      if ((session as any).resumed) {
         addToast('Resumed existing exam session.', 'info');
       }
 

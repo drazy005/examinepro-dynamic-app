@@ -76,7 +76,7 @@ export const api = {
     delete: (id: string) => request<void>(`/exams/${id}`, { method: 'DELETE' }),
     releaseResults: (id: string) => request<void>(`/exams/${id}?action=release`, { method: 'POST' }),
     // Start Exam moved to submissions logic
-    start: (examId: string) => request<{ exam: Exam, startTime: number }>('/submissions?action=start', { method: 'POST', body: JSON.stringify({ examId }) }),
+    start: (examId: string) => request<{ exam: Exam, startTime: number, submissionId: string, answersDraft?: any, resumed?: boolean }>('/submissions?action=start', { method: 'POST', body: JSON.stringify({ examId }) }),
   },
   submissions: {
     list: (params: { page?: number; limit?: number; mode?: 'history' } = {}) => {

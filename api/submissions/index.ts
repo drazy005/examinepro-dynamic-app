@@ -39,19 +39,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (!exam) return res.status(404).json({ error: 'Exam not found' });
             if (!exam.published && !isAdmin) return res.status(403).json({ error: 'Exam not published' });
 
-            // Check existing attempt (optional, currently allowing multiple)
+            // Check for existing attempt (resume if not released?)
+            // For now, if there is a submission that is not released, resume it?
+            // Schema has 'resultsReleased'. 
+            // Also we might want to check if time limit expired. 
+            // For MVP, look for the most recent submission.
+            const existing = await db.submission.findFirst({
+                where: { userId: user.userId, examId: examId },
+                orderBy: { submittedAt: 'desc' }
+            });
 
-            // Return exam structure for the attempt
-            // (We don't create a DB record for "Start" yet, only on Submit, 
-            // but we could track "Started" status if needed. For now, valid return is enough)
+            // Resume if existing and NOT graded/released? 
+            // OR if time is not up?
+            // For simplicity: if it's UNGRADED, resume it.
+            if (existing && existing.status === 'UNGRADED' && !existing.resultsReleased) {
+                const sanitizedQuestions = exam.questions.map(q => ({
+                    id: q.id,
+                    text: q.text,
+                    type: q.type,
+                    options: q.options,
+                    points: q.points
+                }));
+
+                return res.status(200).json({
+                    exam: {
+                        id: exam.id,
+                        title: exam.title,
+                        durationMinutes: exam.durationMinutes,
+                        questions: sanitizedQuestions
+                    },
+                    startTime: existing.submittedAt.getTime(), // Or created time if we had it? submittedAt defaults to now() on create
+                    submissionId: existing.id,
+                    answersDraft: existing.answersDraft || {},
+                    resumed: true
+                });
+            }
+
+            // Create New Submission
+            // We set submittedAt to NOW, which marks the start time.
+            const newSubmission = await db.submission.create({
+                data: {
+                    examId,
+                    userId: user.userId,
+                    answers: {}, // Empty initially
+                    questionResults: {},
+                    status: 'UNGRADED',
+                    submittedAt: new Date(), // Start time
+                    graded: false,
+                    resultsReleased: false
+                }
+            });
 
             const sanitizedQuestions = exam.questions.map(q => ({
                 id: q.id,
                 text: q.text,
                 type: q.type,
                 options: q.options,
-                points: q.points,
-                // NO CORRECT ANSWER
+                points: q.points
             }));
 
             return res.status(200).json({
@@ -61,7 +105,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     durationMinutes: exam.durationMinutes,
                     questions: sanitizedQuestions
                 },
-                startTime: Date.now()
+                startTime: newSubmission.submittedAt.getTime(),
+                submissionId: newSubmission.id,
+                answersDraft: {},
+                resumed: false
             });
         }
 
