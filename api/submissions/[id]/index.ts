@@ -121,15 +121,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // PUT: Update
     if (req.method === 'PUT') {
-        if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
         try {
+            const submission = await db.submission.findUnique({ where: { id }, include: { exam: { include: { questions: true } } } });
+            if (!submission) return res.status(404).json({ error: 'Submission not found' });
+
+            // Permission Check
+            if (submission.userId !== user.userId && !isAdmin) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+
             const updates = req.body;
-            delete updates.id;
-            delete updates.userId;
-            delete updates.examId;
+
+            // Security: Prevent candidates from modifying critical fields directly
+            if (!isAdmin) {
+                delete updates.userId;
+                delete updates.examId;
+                delete updates.score;
+                delete updates.graded;
+                delete updates.status;
+                delete updates.questionResults;
+            }
+
+            // Grading Logic (if answers are provided and we are effectively submitting or updating)
+            // If the client sends 'answers', we should re-grade.
+            if (updates.answers) {
+                const exam = submission.exam;
+                if (exam) {
+                    let totalScore = 0;
+                    const questionResults: Record<string, any> = {};
+                    let requiresManualGrading = false;
+
+                    for (const q of exam.questions) {
+                        const userAnswer = updates.answers[q.id];
+                        const result: any = { score: 0, isCorrect: false };
+
+                        if (q.type === 'MCQ' || q.type === 'SBA') {
+                            if (userAnswer === q.correctAnswer) {
+                                result.score = q.points;
+                                result.isCorrect = true;
+                                totalScore += q.points;
+                            }
+                        } else if (q.type === 'THEORY') {
+                            result.score = 0;
+                            requiresManualGrading = true;
+                        }
+                        questionResults[q.id] = result;
+                    }
+
+                    updates.score = totalScore;
+                    updates.questionResults = questionResults;
+                    updates.status = requiresManualGrading ? 'PENDING_MANUAL_REVIEW' : 'GRADED';
+                    updates.graded = !requiresManualGrading;
+                    updates.resultsReleased = exam.resultRelease === 'INSTANT';
+                }
+            }
+
+            // Do NOT update submittedAt. It represents the Start Time of the attempt.
+            // We can calculate 'finishedAt' implicitly or use timeSpentMs.
+            // if (updates.submittedAt) { updates.submittedAt = new Date(updates.submittedAt); }
+
             const updated = await db.submission.update({ where: { id }, data: updates });
             return res.status(200).json({ ...updated, gradingStatus: updated.status });
         } catch (e) {
+            console.error(e);
             return res.status(500).json({ error: 'Failed to update' });
         }
     }

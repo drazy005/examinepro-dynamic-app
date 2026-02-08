@@ -157,7 +157,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
       examId: exam.id,
       studentId,
       answers,
-      submittedAt: Date.now(),
+      // Do not send submittedAt, let server keep the original start time
       id: submissionId // Pass ID if updating existing
     });
   }, [exam.id, studentId, answers, onSubmit, isSubmitting, exam.questions.length]);
