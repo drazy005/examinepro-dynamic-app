@@ -63,16 +63,16 @@ export const useExams = () => {
     }
   }, [exams, addToast]);
 
-  const refreshExams = async () => {
+  const refreshExams = useCallback(async (silent = false) => {
     try {
       const examsData = await api.exams.list();
       setExams(examsData);
     } catch (e: any) {
-      if (e.message !== 'Unauthorized' && e.message !== 'Forbidden') {
+      if (!silent && e.message !== 'Unauthorized' && e.message !== 'Forbidden') {
         addToast('Failed to load exams.', 'error');
       }
     }
-  };
+  }, [addToast]);
 
   return { exams, setExams, saveExam, deleteExam, bulkDeleteExams, refreshExams };
 };

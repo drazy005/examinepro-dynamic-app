@@ -8,13 +8,13 @@ export const useQuestions = () => {
     const [questions, setQuestions] = useState<Question[]>([]);
     const { addToast } = useToast();
 
-    const fetchQuestions = useCallback(async () => {
+    const fetchQuestions = useCallback(async (silent = false) => {
         try {
             const data = await api.questions.list();
             setQuestions(data);
         } catch (e: any) {
             console.error(e);
-            if (e.message !== 'Unauthorized' && e.message !== 'Forbidden') {
+            if (!silent && e.message !== 'Unauthorized' && e.message !== 'Forbidden') {
                 const msg = e.message || 'Unknown error';
                 addToast(`Failed to load questions: ${msg}`, 'error');
             }

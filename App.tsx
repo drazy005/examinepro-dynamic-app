@@ -83,8 +83,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) {
-      refreshQuestions();
-      refreshExams();
+      refreshQuestions(true); // Silent
+      refreshExams(true);     // Silent
     }
   }, [user, refreshQuestions, refreshExams]);
 
