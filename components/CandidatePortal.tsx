@@ -50,6 +50,17 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
         return <span className="text-amber-600 italic">Result Pending</span>;
     };
 
+    const safelyFormatDate = (date: any) => {
+        try {
+            if (!date) return 'N/A';
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return 'Invalid Date';
+            return format(d, 'MMM dd, yyyy');
+        } catch (e) {
+            return 'Date Error';
+        }
+    };
+
     return (
         <div className="max-w-6xl mx-auto p-4 space-y-6">
             {/* Header */}
@@ -80,11 +91,11 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
             <div className="min-h-[400px]">
                 {activeTab === 'available' ? (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {availableExams.length === 0 && <p className="text-slate-500 col-span-full text-center py-10">No exams available at this time.</p>}
-                        {availableExams.map(exam => (
+                        {(!availableExams || availableExams.length === 0) && <p className="text-slate-500 col-span-full text-center py-10">No exams available at this time.</p>}
+                        {Array.isArray(availableExams) && availableExams.map(exam => (
                             <div key={exam.id} className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start mb-4">
-                                    <span className="px-2 py-1 text-xs font-semibold rounded bg-indigo-100 text-indigo-700">{exam.category}</span>
+                                    <span className="px-2 py-1 text-xs font-semibold rounded bg-indigo-100 text-indigo-700">{exam.category || 'General'}</span>
                                     <span className="text-xs text-slate-400">{exam.durationMinutes} mins</span>
                                 </div>
                                 <h3 className="text-xl font-bold mb-2">{exam.title}</h3>
@@ -112,10 +123,10 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
                                 </tr>
                             </thead>
                             <tbody>
-                                {history.map(sub => (
+                                {Array.isArray(history) && history.map(sub => (
                                     <tr key={sub.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                        <td className="p-4 font-medium">{sub.examId}</td> {/* ideally map ID to Title */}
-                                        <td className="p-4 text-slate-500">{format(sub.submittedAt, 'MMM dd, yyyy')}</td>
+                                        <td className="p-4 font-medium">{(sub.exam && sub.exam.title) || 'Unknown Exam'}</td>
+                                        <td className="p-4 text-slate-500">{safelyFormatDate(sub.submittedAt)}</td>
                                         <td className="p-4">{getResultDisplay(sub)}</td>
                                         <td className="p-4">
                                             {sub.resultsReleased && <button onClick={() => onViewDetails(sub)} className="text-indigo-600 hover:underline text-sm font-bold">View Details</button>}
@@ -124,7 +135,7 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
                                 ))}
                             </tbody>
                         </table>
-                        {history.length === 0 && <div className="p-8 text-center text-slate-500">No past exams found.</div>}
+                        {(!history || history.length === 0) && <div className="p-8 text-center text-slate-500">No past exams found.</div>}
                     </div>
                 )}
             </div>
