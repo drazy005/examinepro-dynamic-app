@@ -85,6 +85,29 @@ async function handleUsers(req: VercelRequest, res: VercelResponse, user: any) {
             }
         });
     }
+
+    if (req.method === 'POST') {
+        const { action, userId, newPassword } = req.body;
+
+        if (action === 'reset-password') {
+            if (!userId || !newPassword) return res.status(400).json({ error: 'UserId and NewPassword required' });
+
+            // Optional: Prevent resetting other SuperAdmins unless you are one?
+            // Current user is already checked as ADMIN/SUPERADMIN in main handler.
+
+            try {
+                const hash = await authLib.hashPassword(newPassword);
+                await db.user.update({
+                    where: { id: userId },
+                    data: { passwordHash: hash } as any
+                });
+                return res.status(200).json({ success: true, message: 'Password updated' });
+            } catch (e: any) {
+                return res.status(500).json({ error: 'Failed to reset password' });
+            }
+        }
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
 }
 

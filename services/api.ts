@@ -94,7 +94,15 @@ export const api = {
     bulkDelete: (ids: string[]) => Promise.all(ids.map(id => request<void>(`/submissions/${id}`, { method: 'DELETE' }))),
   },
   admin: {
-    users: (page = 1, limit = 50) => request<{ data: any[], pagination: any }>(`/admin/users?page=${page}&limit=${limit}`),
+    users: Object.assign(
+      (page = 1, limit = 50) => request<{ data: any[], pagination: any }>(`/admin/users?page=${page}&limit=${limit}`),
+      {
+        resetPassword: (userId: string, newPassword: string) => request<any>('/admin/users', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'reset-password', userId, newPassword })
+        })
+      }
+    ),
     logs: (page = 1, limit = 50) => request<{ data: any[], pagination: any }>(`/admin/logs?page=${page}&limit=${limit}`),
     stats: () => request<any>('/admin/stats'),
     broadcast: (data: any) => request<any>('/admin/broadcast', { method: 'POST', body: JSON.stringify(data) }),

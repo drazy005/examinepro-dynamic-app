@@ -340,6 +340,21 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                     <td className="p-3 font-bold">{u.name}<br /><span className="text-xs font-normal text-slate-400">{u.email}</span></td>
                     <td className="p-3"><span className="bg-slate-100 px-2 py-1 rounded text-[10px] font-black">{u.role}</span></td>
                     <td className="p-3"><span className={`px-2 py-1 rounded text-[10px] font-black ${u.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{u.isVerified ? 'VERIFIED' : 'PENDING'}</span></td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => {
+                          const newPw = prompt(`Enter new password for ${u.name}:`);
+                          if (newPw) {
+                            api.admin.users.resetPassword(u.id, newPw)
+                              .then(() => addToast('Password reset successfully', 'success'))
+                              .catch(() => addToast('Failed to reset password', 'error'));
+                          }
+                        }}
+                        className="text-indigo-600 font-bold text-xs hover:underline"
+                      >
+                        Reset Password
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
