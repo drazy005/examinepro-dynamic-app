@@ -22,6 +22,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const role = user.role as string;
     const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(role);
 
+    const { action } = req.query;
+
+    // === ACTIONS (POST) ===
+    if (req.method === 'POST') {
+        // Draft Save
+        if (action === 'draft') {
+            try {
+                const { submissionId, answers } = req.body;
+                if (!submissionId || !answers) return res.status(400).json({ error: 'Missing data' });
+
+                const submission = await db.submission.findUnique({ where: { id: submissionId } });
+                if (!submission) return res.status(404).json({ error: 'Submission not found' });
+                if (submission.userId !== user.userId && !isAdmin) return res.status(403).json({ error: 'Forbidden' });
+
+                await db.submission.update({
+                    where: { id: submissionId },
+                    data: { answersDraft: answers }
+                });
+                return res.status(200).json({ success: true, savedAt: Date.now() });
+            } catch (e) {
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+        }
+
+        // Release All
+        if (action === 'release-all') {
+            if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+            try {
+                await db.submission.updateMany({
+                    where: { resultsReleased: false },
+                    data: { resultsReleased: true }
+                });
+                return res.status(200).json({ success: true });
+            } catch (e) {
+                return res.status(500).json({ error: 'Failed' });
+            }
+        }
+    }
+
+    // === STANDARD OPERATIONS ===
+
     // GET: List
     if (req.method === 'GET') {
         const { mode } = req.query;
@@ -82,8 +123,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
-    // POST: Create Submission
-    if (req.method === 'POST') {
+    // POST: Create Submission (Generic Save)
+    if (req.method === 'POST' && !action) {
         try {
             const { examId, answers, timeSpentMs } = req.body;
 

@@ -5,7 +5,7 @@ import { authLib } from '../../_lib/auth.js';
 import { parse } from 'cookie';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const { id } = req.query;
+    const { id, action } = req.query;
     if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Invalid ID' });
 
     const cookies = parse(req.headers.cookie || '');
@@ -17,6 +17,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const role = user.role as string;
     const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(role);
+
+    // === ACTIONS (POST) ===
+    if (req.method === 'POST') {
+        if (action === 'release') {
+            if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+            try {
+                // Release all submissions for this exam
+                await db.submission.updateMany({
+                    where: { examId: id },
+                    data: { resultsReleased: true }
+                });
+                return res.status(200).json({ success: true });
+            } catch (e) {
+                return res.status(500).json({ error: 'Failed to release results' });
+            }
+        }
+        return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    // === STANDARD OPERATIONS ===
 
     // GET: Detail
     if (req.method === 'GET') {

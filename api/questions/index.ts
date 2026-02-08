@@ -24,6 +24,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: 'Forbidden' });
     }
 
+    const { action } = req.query;
+
+    // === BATCH OPERATIONS ===
+    if (action === 'batch') {
+        // DELETE BATCH
+        if (req.method === 'DELETE') {
+            const { ids } = req.body;
+            if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: 'Invalid payload' });
+
+            try {
+                const result = await db.question.deleteMany({ where: { id: { in: ids } } });
+                return res.status(200).json({ success: true, count: result.count });
+            } catch (e: any) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        // POST IMPORT
+        if (req.method === 'POST') {
+            const questions = req.body;
+            if (!Array.isArray(questions)) return res.status(400).json({ error: 'Invalid payload' });
+
+            const validQuestions = questions.map((q: any) => ({
+                type: q.type || 'MCQ',
+                text: q.text || 'Untitled Question',
+                options: q.options || [],
+                correctAnswer: q.correctAnswer || '',
+                points: q.points || 1,
+                examId: q.examId || undefined
+            }));
+
+            try {
+                const result = await db.question.createMany({ data: validQuestions });
+                return res.status(200).json({ success: true, count: result.count });
+            } catch (e: any) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+        return res.status(405).json({ error: 'Method not allowed for batch' });
+    }
+
+    // === STANDARD OPERATIONS ===
+
     // GET: List
     if (req.method === 'GET') {
         try {
@@ -59,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
-    // DELETE: Purge or Single via Query (Legacy support if needed, but [id].ts should handle single)
+    // DELETE: Purge or Single via Query
     if (req.method === 'DELETE') {
         const { id, mode, type } = req.query;
 
@@ -71,8 +114,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ success: true });
         }
 
-        // If ID is passed as query to root? Should be handled by [id].ts really.
-        // But keeping for safety if older client code calls /api/questions?id=...
         if (id && typeof id === 'string') {
             await db.question.delete({ where: { id } });
             return res.status(200).json({ success: true });
