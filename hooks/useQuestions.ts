@@ -14,9 +14,10 @@ export const useQuestions = () => {
             setQuestions(data);
         } catch (e: any) {
             console.error(e);
-            // Show specific error message from API if available
-            const msg = e.message || 'Unknown error';
-            addToast(`Failed to load questions: ${msg}`, 'error');
+            if (e.message !== 'Unauthorized' && e.message !== 'Forbidden') {
+                const msg = e.message || 'Unknown error';
+                addToast(`Failed to load questions: ${msg}`, 'error');
+            }
         }
     }, [addToast]);
 
@@ -28,7 +29,15 @@ export const useQuestions = () => {
 
     const saveQuestion = async (question: Question) => {
         try {
-            const saved = await api.questions.save(question);
+            let saved: Question;
+            if (question.id) {
+                // Update existing
+                saved = await api.questions.update(question.id, question);
+            } else {
+                // Create new
+                saved = await api.questions.create(question);
+            }
+
             setQuestions(prev => {
                 const idx = prev.findIndex(q => q.id === saved.id);
                 if (idx > -1) {

@@ -91,11 +91,18 @@ export const api = {
     release: (submissionId: string) => request<void>(`/submissions/${submissionId}?action=release`, { method: 'POST' }),
     releaseAll: () => request<void>('/submissions?action=release-all', { method: 'POST' }),
     aiGrade: (submissionId: string) => request<void>(`/submissions/${submissionId}?action=ai-grade`, { method: 'POST' }),
+    bulkDelete: (ids: string[]) => Promise.all(ids.map(id => request<void>(`/submissions/${id}`, { method: 'DELETE' }))),
   },
   admin: {
-    users: () => request<any[]>('/admin/users'),
-    logs: () => request<any[]>('/admin/logs'),
+    users: (page = 1, limit = 50) => request<{ data: any[], pagination: any }>(`/admin/users?page=${page}&limit=${limit}`),
+    logs: (page = 1, limit = 50) => request<{ data: any[], pagination: any }>(`/admin/logs?page=${page}&limit=${limit}`),
     stats: () => request<any>('/admin/stats'),
+    broadcast: (data: any) => request<any>('/admin/broadcast', { method: 'POST', body: JSON.stringify(data) }),
+    testEmail: (email: string) => request<any>('/admin/test-email', { method: 'POST', body: JSON.stringify({ email }) }),
+    announcements: {
+      list: () => request<any[]>('/admin/announcements'),
+      create: (data: any[]) => request<any[]>('/admin/announcements', { method: 'POST', body: JSON.stringify(data) }),
+    },
   },
   settings: {
     get: () => request<any>('/admin/settings'),

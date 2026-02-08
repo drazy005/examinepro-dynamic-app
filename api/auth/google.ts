@@ -1,7 +1,7 @@
 
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from './_lib/db.js';
-import { GoogleUser, getGoogleAuthUrl, getGoogleUser, signToken } from './_lib/auth.js';
+import { db } from '../_lib/db.js';
+import { GoogleUser, getGoogleAuthUrl, getGoogleUser, signToken } from '../_lib/auth.js';
 import { parse } from 'cookie';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

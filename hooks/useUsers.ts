@@ -10,7 +10,7 @@ export const useUsers = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response: any = await api.admin.getUsers();
+        const response: any = await api.admin.users();
         // Handle both direct array and paginated response { data: [] }
         const usersList = Array.isArray(response) ? response : (response.data || []);
         setUsers(usersList as User[]);
@@ -23,7 +23,7 @@ export const useUsers = () => {
 
   const refreshUsers = async () => {
     try {
-      const response: any = await api.admin.getUsers();
+      const response: any = await api.admin.users();
       const usersList = Array.isArray(response) ? response : (response.data || []);
       setUsers(usersList as User[]);
     } catch (e) {

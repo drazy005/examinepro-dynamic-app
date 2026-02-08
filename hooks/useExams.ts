@@ -8,17 +8,12 @@ export const useExams = () => {
   const [exams, setExams] = useState<Exam[]>([]);
   const { addToast } = useToast();
 
-  useEffect(() => {
-    const fetchExams = async () => {
-      try {
-        const examsData = await api.exams.list();
-        setExams(examsData);
-      } catch (e) {
-        addToast('Failed to load exams.', 'error');
-      }
-    };
-    fetchExams();
-  }, [addToast]);
+  // Auto-fetch removed to prevent 401s on non-admin users.
+  // App.tsx or specific components will call refreshExams when appropriate.
+  // useEffect(() => {
+  //   const fetchExams = async () => { ... }
+  //   fetchExams();
+  // }, [addToast]);
 
   const saveExam = useCallback(async (exam: Exam) => {
     try {
@@ -26,7 +21,7 @@ export const useExams = () => {
       let saved: Exam;
 
       if (isUpdate) {
-        saved = await api.exams.update(exam);
+        saved = await api.exams.update(exam.id, exam);
       } else {
         saved = await api.exams.create(exam);
       }
@@ -72,8 +67,10 @@ export const useExams = () => {
     try {
       const examsData = await api.exams.list();
       setExams(examsData);
-    } catch (e) {
-      // silent fetch? or toast
+    } catch (e: any) {
+      if (e.message !== 'Unauthorized' && e.message !== 'Forbidden') {
+        addToast('Failed to load exams.', 'error');
+      }
     }
   };
 

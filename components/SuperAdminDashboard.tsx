@@ -35,8 +35,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const data = await api.admin.getLogs();
-        setLogs(data);
+        const response = await api.admin.logs();
+        setLogs(response.data);
       } catch (e) {
         // Silent fail or toast
       }
@@ -62,7 +62,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
     setSettings(newSettings);
 
     try {
-      await api.admin.updateSettings(updates);
+      await api.settings.update(updates);
     } catch (e) {
       console.error("Settings Update Failed:", e);
       setSettings(oldSettings); // Revert on failure
@@ -105,8 +105,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
         timestamp: new Date().toISOString(),
         settings,
         branding,
-        users: await api.admin.getUsers(), // Fetch fresh user list
-        logs: await api.admin.getLogs(),
+        users: (await api.admin.users()).data, // Fetch fresh user list
+        logs: (await api.admin.logs()).data,
         announcements
       };
 
@@ -199,7 +199,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                     const newSettings = { ...settings, aiGradingEnabled: !settings.aiGradingEnabled };
                     setSettings(newSettings); // Local update
                     try {
-                      await api.admin.updateSettings({ aiGradingEnabled: newSettings.aiGradingEnabled }); // Server sync partial
+                      await api.settings.update({ aiGradingEnabled: newSettings.aiGradingEnabled }); // Server sync partial
                       addToast('Settings saved', 'success');
                     } catch {
                       addToast('Failed to save settings', 'error');
@@ -309,7 +309,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
               <button
                 onClick={async () => {
                   try {
-                    await api.admin.updateSettings({ branding });
+                    await api.settings.update({ branding });
                     addToast('Appearance Saved Globally', 'success');
                   } catch (e) {
                     addToast('Failed to save appearance', 'error');

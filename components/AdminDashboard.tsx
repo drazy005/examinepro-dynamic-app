@@ -86,7 +86,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   const fetchSubmissions = async (page = 1) => {
     setIsLoadingData(true);
     try {
-      const { data, pagination } = await api.submissions.list(page, 20); // Limit 20
+      const response = await api.submissions.list({ page, limit: 20 });
+      const { data, pagination } = 'data' in response ? response : { data: response as Submission[], pagination: { total: 0, page: 1, totalPages: 1 } };
       setSubmissionsData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
     } catch (e) { addToast("Failed to load submissions", "error"); }
     setIsLoadingData(false);
@@ -95,7 +96,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   const fetchUsers = async (page = 1) => {
     setIsLoadingData(true);
     try {
-      const { data, pagination } = await api.admin.getUsers(page, 20);
+      const { data, pagination } = await api.admin.users(page, 20);
       setUsersData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
     } catch (e) { addToast("Failed to load users", "error"); }
     setIsLoadingData(false);
@@ -104,7 +105,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   const fetchLogs = async (page = 1) => {
     setIsLoadingData(true);
     try {
-      const { data, pagination } = await api.admin.getLogs(page, 20);
+      const { data, pagination } = await api.admin.logs(page, 20);
       setLogsData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
     } catch (e) { addToast("Failed to load logs", "error"); }
     setIsLoadingData(false);
@@ -236,7 +237,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
   const handleManualGrade = async (submissionId: string, questionId: string, result: QuestionResult) => {
     try {
-      await api.submissions.manualGrade(submissionId, questionId, result);
+      await api.submissions.grade(submissionId, questionId, result);
       addToast('Question graded successfully.', 'success');
       fetchSubmissions(submissionsData.page); // Refresh current page
     } catch (e) {
@@ -246,7 +247,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
   const handleReleaseResults = async (examId: string) => {
     try {
-      await api.submissions.releaseResultsForExam(examId);
+      await api.exams.releaseResults(examId);
       addToast('Results released for exam.', 'success');
       fetchSubmissions(submissionsData.page); // Refresh current page
     } catch (e) {
@@ -256,7 +257,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
   const handleReleaseSingleSubmission = async (id: string) => {
     try {
-      await api.submissions.releaseSingleSubmission(id);
+      await api.submissions.release(id);
       addToast('Submission results released.', 'success');
       fetchSubmissions(submissionsData.page); // Refresh current page
     } catch (e) {
@@ -266,7 +267,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
   const handleReleaseAllDelayedResults = async () => {
     try {
-      await api.submissions.releaseAllDelayedResults();
+      await api.submissions.releaseAll();
       addToast('All delayed results released.', 'success');
       fetchSubmissions(submissionsData.page); // Refresh current page
     } catch (e) {
