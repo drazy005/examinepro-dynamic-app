@@ -8,9 +8,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cookies = parse(req.headers.cookie || '');
     const token = cookies.auth_token;
 
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    console.log(`[Exams] Method: ${req.method}, Query: ${JSON.stringify(req.query)}`);
+    console.log(`[Exams] Token present: ${!!token}, Cookie length: ${req.headers.cookie?.length || 0}`);
+
+    if (!token) {
+        console.warn('[Exams] No token provided');
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
     const user = authLib.verifyToken(token);
-    if (!user) return res.status(401).json({ error: 'Invalid token' });
+    if (!user) {
+        console.warn('[Exams] Invalid token');
+        return res.status(401).json({ error: 'Invalid token' });
+    }
 
     const role = user.role as string;
     const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(role);
