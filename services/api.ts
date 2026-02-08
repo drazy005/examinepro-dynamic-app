@@ -27,6 +27,7 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
+      credentials: 'include', // Ensure cookies are sent with requests
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
