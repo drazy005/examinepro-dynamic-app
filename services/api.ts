@@ -1,39 +1,58 @@
 
 import { Question, Exam, Submission, User } from './types.js';
-import { useJson } from './useJson.js'; // Helper if needed, but we use standard fetch here mainly
-import { AuthToken } from '../api/_lib/auth.js'; // Type ref
 
 const API_BASE = '/api';
 
-// Simple fetch wrapper
-const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
+// === Global Loading State Management ===
+type LoadingListener = (isLoading: boolean) => void;
+let loadingListeners: LoadingListener[] = [];
+let activeRequests = 0;
 
-  if (!res.ok) {
-    // Try to parse error
-    let errorMsg = res.statusText;
-    try {
-      const json = await res.json();
-      errorMsg = json.error || errorMsg;
-    } catch { }
-    throw new Error(errorMsg);
-  }
-
-  // Handle 204 No Content or empty responses if needed
-  if (res.status === 204) return {} as T;
-
-  return res.json();
+const notifyLoading = (isLoading: boolean) => {
+  loadingListeners.forEach(l => l(isLoading));
 };
 
-// Hook-like helper for loading state (used in components usually, but here we just export functions)
-// We'll keep the structure simple.
+export const subscribeToLoading = (listener: LoadingListener) => {
+  loadingListeners.push(listener);
+  return () => {
+    loadingListeners = loadingListeners.filter(l => l !== listener);
+  };
+};
 
+// === Request Wrapper ===
+const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
+  // Start Loading
+  if (activeRequests === 0) notifyLoading(true);
+  activeRequests++;
+
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (!res.ok) {
+      let errorMsg = res.statusText;
+      try {
+        const json = await res.json();
+        errorMsg = json.error || errorMsg;
+      } catch { }
+      throw new Error(errorMsg);
+    }
+
+    if (res.status === 204) return {} as T;
+    return res.json();
+  } finally {
+    // End Loading
+    activeRequests--;
+    if (activeRequests === 0) notifyLoading(false);
+  }
+};
+
+// === API Definitions ===
 export const api = {
   auth: {
     login: (credentials: any) => request<any>('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
@@ -82,7 +101,7 @@ export const api = {
   }
 };
 
-// Helper for components to wrap async calls
+// Helper (kept for backward compatibility if components use it locally)
 export const withLoading = async <T>(promise: Promise<T>, setLoading?: (l: boolean) => void): Promise<T> => {
   if (setLoading) setLoading(true);
   try {
