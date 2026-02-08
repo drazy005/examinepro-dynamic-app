@@ -36,6 +36,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'settings' && req.method === 'GET') {
         return await handleSettings(req, res, user, isSuperAdmin);
     }
+    // Allow Candidates to view announcements
+    if (resource === 'announcements' && req.method === 'GET') {
+        return await handleAnnouncements(req, res, user);
+    }
 
     // Strict Admin Check for everything else
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
