@@ -798,7 +798,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
           onPreviewExam={onPreviewExam}
           onViewSubmission={(sub, exam) => setSelectedSubmission({ sub, exam })}
           onExamReviewed={async (id) => {
-            await onSaveExam({ ...exams.find(e => e.id === id), reviewed: true } as any);
+            const exam = exams.find(e => e.id === id);
+            if (exam) {
+              // Exclude questions to prevent destructive update/re-creation
+              const { questions, ...rest } = exam;
+              await onSaveExam({ ...rest, reviewed: true } as any);
+            }
           }}
         />
       )}
