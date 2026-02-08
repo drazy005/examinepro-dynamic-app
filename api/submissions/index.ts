@@ -155,18 +155,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
             if (mode === 'history') {
                 // Candidate View
-                const mySubmissions = await db.submission.findMany({
-                    where: { userId: user.userId },
-                    orderBy: { submittedAt: 'desc' },
-                    include: {
-                        exam: { select: { title: true } }
-                    }
-                });
-                const mapped = mySubmissions.map(s => ({
-                    ...s,
-                    gradingStatus: s.status
-                }));
-                return res.status(200).json(mapped);
+                try {
+                    const mySubmissions = await db.submission.findMany({
+                        where: { userId: user.userId },
+                        orderBy: { submittedAt: 'desc' },
+                        include: {
+                            exam: { select: { title: true } }
+                        }
+                    });
+                    const mapped = mySubmissions.map(s => ({
+                        ...s,
+                        gradingStatus: s.status
+                    }));
+                    return res.status(200).json(mapped);
+                } catch (historyError) {
+                    console.error("History fetch error:", historyError);
+                    // Fallback to simple fetch if relation failed
+                    const raw = await db.submission.findMany({
+                        where: { userId: user.userId },
+                        orderBy: { submittedAt: 'desc' }
+                    });
+                    return res.status(200).json(raw);
+                }
             }
 
             // Admin View

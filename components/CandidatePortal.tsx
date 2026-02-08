@@ -20,20 +20,22 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
     }, []);
 
     const loadData = async () => {
+        // Fetch Available Exams
         try {
-            // Parallel fetch
-            const [examsData, historyData] = await Promise.all([
-                api.exams.list('available'),
-                api.submissions.list({ mode: 'history' })
-            ]);
+            const examsData = await api.exams.list('available');
+            setAvailableExams(examsData || []);
+        } catch (e) {
+            console.error("Failed to load exams", e);
+        }
 
+        // Fetch History
+        try {
+            const historyData = await api.submissions.list({ mode: 'history' });
             // Handle pagination wrapper if present
             const historyList = Array.isArray(historyData) ? historyData : (historyData as any).data || [];
-
-            setAvailableExams(examsData || []);
             setHistory(historyList);
         } catch (e) {
-            console.error("Failed to load portal data", e);
+            console.error("Failed to load history", e);
         }
     };
 
