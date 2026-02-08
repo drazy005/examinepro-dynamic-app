@@ -47,10 +47,11 @@ export const authLib = {
 
     // Create HTTP-only cookie
     createCookie: (token: string) => {
+        const isProd = process.env.NODE_ENV === 'production';
         return serialize(TOKEN_NAME, token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax', // Lax is required for consistent sessions during navigation
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax', // None + Secure is most robust for Prod HTTPS
             maxAge: 60 * 60 * 24 * 7, // 7 days
             path: '/',
         });
@@ -58,10 +59,11 @@ export const authLib = {
 
     // Clear cookie
     removeCookie: () => {
+        const isProd = process.env.NODE_ENV === 'production';
         return serialize(TOKEN_NAME, '', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: isProd,
+            sameSite: isProd ? 'none' : 'lax',
             maxAge: -1,
             path: '/',
         });
