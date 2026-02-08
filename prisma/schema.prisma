@@ -83,6 +83,7 @@ model Exam {
   published       Boolean       @default(false)
   version         Int           @default(1)
   resultRelease   ResultRelease @default(INSTANT)
+  reviewed        Boolean       @default(false)
   
   // JSON settings for flexibility (Timer, Grading Policy)
   timerSettings   Json

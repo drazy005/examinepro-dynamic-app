@@ -797,6 +797,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
           users={usersData.data}
           onPreviewExam={onPreviewExam}
           onViewSubmission={(sub, exam) => setSelectedSubmission({ sub, exam })}
+          onExamReviewed={async (id) => {
+            await onSaveExam({ ...exams.find(e => e.id === id), reviewed: true } as any);
+          }}
         />
       )}
 

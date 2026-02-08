@@ -63,8 +63,14 @@ async function handleUsers(req: VercelRequest, res: VercelResponse, user: any) {
         const limit = Number(req.query.limit) || 50;
         const skip = (page - 1) * limit;
 
+        const whereClause: any = {};
+        if ((user.role as string) !== 'SUPERADMIN') {
+            whereClause.role = 'CANDIDATE';
+        }
+
         const [users, total] = await Promise.all([
             db.user.findMany({
+                where: whereClause,
                 skip,
                 take: limit,
                 select: {
@@ -72,7 +78,7 @@ async function handleUsers(req: VercelRequest, res: VercelResponse, user: any) {
                 } as any,
                 orderBy: { createdAt: 'desc' }
             }),
-            db.user.count()
+            db.user.count({ where: whereClause })
         ]);
 
         return res.status(200).json({

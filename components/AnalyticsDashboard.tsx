@@ -7,9 +7,10 @@ interface AnalyticsDashboardProps {
     users: User[];
     onPreviewExam: (exam: Exam) => void;
     onViewSubmission: (sub: Submission, exam: Exam) => void;
+    onExamReviewed: (id: string) => void;
 }
 
-const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ exams, submissions, users, onPreviewExam, onViewSubmission }) => {
+const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ exams, submissions, users, onPreviewExam, onViewSubmission, onExamReviewed }) => {
     const [reviewExamId, setReviewExamId] = React.useState<string | null>(null);
 
     const stats = useMemo(() => {
@@ -36,7 +37,8 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ exams, submissi
                 title: exam.title,
                 count: subCount,
                 avg: avgScore,
-                passRate: subCount > 0 ? (passCount / subCount) * 100 : 0
+                passRate: subCount > 0 ? (passCount / subCount) * 100 : 0,
+                reviewed: exam.reviewed // Include reviewed status
             };
         }).sort((a, b) => b.count - a.count); // Most popular first
 
@@ -106,7 +108,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ exams, submissi
                                         </div>
                                     </td>
                                     <td className="p-4">
-                                        {stat.passRate > 80 ? (
+                                        {(stat as any).reviewed ? (
+                                            <span className="text-slate-400 text-[10px] uppercase font-bold flex items-center gap-1">
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                Reviewed
+                                            </span>
+                                        ) : stat.passRate > 80 ? (
                                             <span className="text-emerald-500 text-[10px] uppercase">Excellent</span>
                                         ) : stat.passRate < 50 ? (
                                             <button
@@ -148,6 +155,16 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ exams, submissi
                                 >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                     Preview Exam Content
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        onExamReviewed(reviewExam.id);
+                                        setReviewExamId(null);
+                                    }}
+                                    className="flex-1 bg-emerald-600 text-white px-4 py-3 rounded-xl font-bold uppercase text-xs shadow-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                    Mark as Reviewed
                                 </button>
                             </div>
 
