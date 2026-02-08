@@ -23,11 +23,15 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
         try {
             // Parallel fetch
             const [examsData, historyData] = await Promise.all([
-                api.exams.listAvailable(), // Need to implement/ensure this endpoint exists
-                api.submissions.listMyHistory() // Need to ensure this exists
+                api.exams.list('available'),
+                api.submissions.list({ mode: 'history' })
             ]);
+
+            // Handle pagination wrapper if present
+            const historyList = Array.isArray(historyData) ? historyData : (historyData as any).data || [];
+
             setAvailableExams(examsData || []);
-            setHistory(historyData || []);
+            setHistory(historyList);
         } catch (e) {
             console.error("Failed to load portal data", e);
         }
