@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User, UserRole } from '../services/types';
 import { validateEmail, validatePasswordStrength, sanitize } from '../services/securityService';
@@ -17,6 +18,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole>(UserRole.CANDIDATE);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Toggle state
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +31,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
 
     try {
-      const response = await api.auth.login(cleanEmail, password);
-      // FIX: The api.auth.login method returns the user object directly.
-      onLogin(response);
+      // FIX: Pass object matching { email, password }
+      const response = await api.auth.login({ email: cleanEmail, password });
+      onLogin(response.user || response); // Handle { user: ... } or just user object
     } catch (err: any) {
       setError(err.message || 'Login failed.');
     }
@@ -54,7 +56,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       return;
     }
 
-    // Simplified password check for development ease
     if (password.length < 3) {
       setError('Password must be at least 3 characters.');
       return;
@@ -79,11 +80,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     }
 
     try {
-      await api.auth.forgotPassword(cleanEmail);
+      await api.auth.forgotPassword(cleanEmail); // Ensure this method exists in api.ts types if used
       setAuthView('reset_sent');
     } catch (err: any) {
-      // We rarely want to show the actual error to avoid enumeration, but for now lets just show a generic message if it fails hard
-      // actually the API returns 200 always unless there is a system error
       setError(err.message || 'Failed to request reset link.');
     }
   };
@@ -131,7 +130,26 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password</label>
                   <button type="button" onClick={() => setAuthView('forgot')} className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase hover:underline">Forgotten Password?</button>
                 </div>
-                <input type="password" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 dark:focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-medium transition-all" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 dark:focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-medium transition-all pr-12"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    )}
+                  </button>
+                </div>
               </div>
               <button type="submit" className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl active:scale-95 hover:brightness-110" style={{ backgroundColor: branding.primaryColor }}>Login</button>
 
@@ -177,9 +195,27 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 </div>
                 <div className="col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Password</label>
-                  <input type="password" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:border-indigo-500 outline-none text-slate-900 dark:text-white pr-12"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                {/* Role selection removed - Defaults to CANDIDATE */}
               </div>
               <button type="submit" className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:brightness-110 mt-2" style={{ backgroundColor: branding.primaryColor }}>Create Account</button>
             </form>
