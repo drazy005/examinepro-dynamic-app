@@ -63,9 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 return res.status(200).json({
                     exam: {
-                        id: exam.id,
-                        title: exam.title,
-                        durationMinutes: exam.durationMinutes,
+                        ...exam,
                         questions: sanitizedQuestions
                     },
                     startTime: existing.submittedAt.getTime(), // Or created time if we had it? submittedAt defaults to now() on create
@@ -100,9 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             return res.status(200).json({
                 exam: {
-                    id: exam.id,
-                    title: exam.title,
-                    durationMinutes: exam.durationMinutes,
+                    ...exam, // valid: spreads all scalar fields (timerSettings, etc)
                     questions: sanitizedQuestions
                 },
                 startTime: newSubmission.submittedAt.getTime(),

@@ -34,6 +34,9 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const randomizedExamData = useMemo(() => {
+    if (!exam || !exam.questions || !Array.isArray(exam.questions)) {
+      return { ...exam, questions: [] };
+    }
     function shuffle<T>(array: T[]): T[] {
       const arr = [...array];
       for (let i = arr.length - 1; i > 0; i--) {
@@ -50,10 +53,15 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
   }, [exam]);
 
   const calculateInitialTime = () => {
+    if (!exam) return 0;
     const now = Date.now();
     const start = initialStartTime || now;
+    // Safe access to timerSettings
+    const grace = (exam.timerSettings && exam.timerSettings.gracePeriodSeconds) || 0;
+    const duration = (exam.durationMinutes || 0) * 60;
+
     // Simple duration based timer
-    const expiry = start + (exam.durationMinutes * 60 + (exam.timerSettings.gracePeriodSeconds || 0)) * 1000;
+    const expiry = start + (duration + grace) * 1000;
     return Math.max(0, Math.floor((expiry - now) / 1000));
   };
 
@@ -155,8 +163,9 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
   }, [exam.id, studentId, answers, onSubmit, isSubmitting, exam.questions.length]);
 
   useEffect(() => {
+    const autoSubmit = exam.timerSettings && exam.timerSettings.autoSubmitOnExpiry;
     if (timeLeft <= 0) {
-      if (exam.timerSettings.autoSubmitOnExpiry && !hasAutoSubmitted.current) {
+      if (autoSubmit && !hasAutoSubmitted.current) {
         hasAutoSubmitted.current = true;
         handleSubmit();
       }
@@ -164,7 +173,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
     }
     const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, handleSubmit, exam.timerSettings.autoSubmitOnExpiry]);
+  }, [timeLeft, handleSubmit, exam.timerSettings]);
 
   if (!randomizedExamData.questions || randomizedExamData.questions.length === 0) {
     return (
