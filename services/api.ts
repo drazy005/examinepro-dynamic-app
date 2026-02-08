@@ -21,7 +21,6 @@ export const subscribeToLoading = (listener: LoadingListener) => {
 
 // === Request Wrapper ===
 const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
-  // Start Loading
   if (activeRequests === 0) notifyLoading(true);
   activeRequests++;
 
@@ -46,7 +45,6 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
     if (res.status === 204) return {} as T;
     return res.json();
   } finally {
-    // End Loading
     activeRequests--;
     if (activeRequests === 0) notifyLoading(false);
   }
@@ -63,8 +61,10 @@ export const api = {
   questions: {
     list: () => request<Question[]>('/questions'),
     create: (data: Partial<Question>) => request<Question>('/questions', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: Partial<Question>) => request<Question>(`/questions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
+    // Using query params for update/delete/import since we merged [id].ts and batch.ts
+    update: (id: string, data: Partial<Question>) => request<Question>(`/questions?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/questions?id=${id}`, { method: 'DELETE' }),
+
     import: (data: any[]) => request<{ count: number }>('/questions?action=batch', { method: 'POST', body: JSON.stringify(data) }),
     bulkDelete: (ids: string[]) => request<{ count: number }>('/questions?action=batch', { method: 'DELETE', body: JSON.stringify({ ids }) }),
   },
@@ -75,6 +75,8 @@ export const api = {
     update: (id: string, data: Partial<Exam>) => request<Exam>(`/exams/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/exams/${id}`, { method: 'DELETE' }),
     releaseResults: (id: string) => request<void>(`/exams/${id}?action=release`, { method: 'POST' }),
+    // Start Exam moved to submissions logic
+    start: (examId: string) => request<{ exam: Exam, startTime: number }>('/submissions?action=start', { method: 'POST', body: JSON.stringify({ examId }) }),
   },
   submissions: {
     list: (params: { page?: number; limit?: number; mode?: 'history' } = {}) => {
@@ -96,12 +98,11 @@ export const api = {
     stats: () => request<any>('/admin/stats'),
   },
   settings: {
-    get: () => request<any>('/settings'),
-    update: (data: any) => request<any>('/settings', { method: 'POST', body: JSON.stringify(data) }),
+    get: () => request<any>('/admin/settings'),
+    update: (data: any) => request<any>('/admin/settings', { method: 'POST', body: JSON.stringify(data) }),
   }
 };
 
-// Helper (kept for backward compatibility if components use it locally)
 export const withLoading = async <T>(promise: Promise<T>, setLoading?: (l: boolean) => void): Promise<T> => {
   if (setLoading) setLoading(true);
   try {

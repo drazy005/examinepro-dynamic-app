@@ -24,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const { action } = req.query;
+    const { action, id, mode, type } = req.query;
 
     // === BATCH OPERATIONS ===
     if (action === 'batch') {
@@ -65,6 +65,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed for batch' });
     }
 
+    // === SINGLE ID OPERATIONS (Logic merged from [id].ts) ===
+    if (id && typeof id === 'string') {
+        // PUT: Update
+        if (req.method === 'PUT') {
+            try {
+                const { type, text, options, correctAnswer, points, category, imageUrl } = req.body;
+                const updated = await db.question.update({
+                    where: { id },
+                    data: { type, text, options, correctAnswer, points, category, imageUrl }
+                });
+                return res.status(200).json(updated);
+            } catch (e: any) {
+                return res.status(500).json({ error: `Failed to update question: ${e.message}` });
+            }
+        }
+
+        // DELETE: Single
+        if (req.method === 'DELETE') {
+            try {
+                await db.question.delete({ where: { id } });
+                return res.status(200).json({ success: true });
+            } catch (e: any) {
+                return res.status(500).json({ error: `Failed to delete question: ${e.message}` });
+            }
+        }
+        // Note: GET single question usually not needed, as list returns all. 
+        // But if needed, add here.
+    }
+
     // === STANDARD OPERATIONS ===
 
     // GET: List
@@ -102,24 +131,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
-    // DELETE: Purge or Single via Query
-    if (req.method === 'DELETE') {
-        const { id, mode, type } = req.query;
-
-        // Purge
-        if (mode === 'purge') {
-            const whereClause: any = {};
-            if (type && type !== 'ALL') whereClause.type = type;
-            await db.question.deleteMany({ where: whereClause });
-            return res.status(200).json({ success: true });
-        }
-
-        if (id && typeof id === 'string') {
-            await db.question.delete({ where: { id } });
-            return res.status(200).json({ success: true });
-        }
-
-        return res.status(400).json({ error: 'Missing ID or Mode' });
+    // DELETE: Purge
+    if (req.method === 'DELETE' && mode === 'purge') {
+        const whereClause: any = {};
+        if (type && type !== 'ALL') whereClause.type = type;
+        await db.question.deleteMany({ where: whereClause });
+        return res.status(200).json({ success: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

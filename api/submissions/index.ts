@@ -26,6 +26,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // === ACTIONS (POST) ===
     if (req.method === 'POST') {
+        // Start Attempt
+        if (action === 'start') {
+            const { examId } = req.body;
+            if (!examId) return res.status(400).json({ error: 'Missing Exam ID' });
+
+            const exam = await db.exam.findUnique({
+                where: { id: examId },
+                include: { questions: true }
+            });
+
+            if (!exam) return res.status(404).json({ error: 'Exam not found' });
+            if (!exam.published && !isAdmin) return res.status(403).json({ error: 'Exam not published' });
+
+            // Check existing attempt (optional, currently allowing multiple)
+
+            // Return exam structure for the attempt
+            // (We don't create a DB record for "Start" yet, only on Submit, 
+            // but we could track "Started" status if needed. For now, valid return is enough)
+
+            const sanitizedQuestions = exam.questions.map(q => ({
+                id: q.id,
+                text: q.text,
+                type: q.type,
+                options: q.options,
+                points: q.points,
+                // NO CORRECT ANSWER
+            }));
+
+            return res.status(200).json({
+                exam: {
+                    id: exam.id,
+                    title: exam.title,
+                    durationMinutes: exam.durationMinutes,
+                    questions: sanitizedQuestions
+                },
+                startTime: Date.now()
+            });
+        }
+
         // Draft Save
         if (action === 'draft') {
             try {

@@ -1,3 +1,4 @@
+
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
@@ -15,12 +16,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Check Auth
     const cookies = parse(req.headers.cookie || '');
     const token = cookies.auth_token;
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-    const user = authLib.verifyToken(token);
-    if (!user || ((user.role as string) !== 'ADMIN' && (user.role as string) !== 'SUPERADMIN')) {
-        return res.status(403).json({ error: 'Forbidden' });
+    // Allow public access for some resources if needed? No, admin is strict.
+    // wait, settings might be needed for branding... which is public.
+    // API/settings.ts allowed public GET for branding.
+    // So if resource === 'settings', we might need to relax the check for GET.
+
+    let user;
+    if (token) {
+        try {
+            user = authLib.verifyToken(token);
+        } catch { } // Ignore invalid token
     }
+
+    const isAdmin = user && ((user.role as string) === 'ADMIN' || (user.role as string) === 'SUPERADMIN');
+    const isSuperAdmin = user && (user.role as string) === 'SUPERADMIN';
+
+    // Public/Semi-Public Resources
+    if (resource === 'settings' && req.method === 'GET') {
+        return await handleSettings(req, res, user, isSuperAdmin);
+    }
+
+    // Strict Admin Check for everything else
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    if (!user || !isAdmin) return res.status(403).json({ error: 'Forbidden' });
 
     try {
         switch (resource) {
@@ -29,6 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'announcements': return await handleAnnouncements(req, res, user);
             case 'broadcast': return await handleBroadcast(req, res, user);
             case 'test-email': return await handleTestEmail(req, res, user);
+            case 'settings': return await handleSettings(req, res, user, isSuperAdmin); // POST updates
             default: return res.status(404).json({ error: 'Resource not found' });
         }
     } catch (error: any) {
@@ -187,13 +207,10 @@ async function handleBroadcast(req: VercelRequest, res: VercelResponse, user: an
     }
 
     try {
-        console.log(`Broadcast Target: ${targetRole}, Clause:`, whereClause);
         const recipients = await db.user.findMany({
             where: whereClause,
             select: { email: true, name: true }
         });
-
-        console.log(`Found ${recipients.length} recipients`);
 
         if (recipients.length === 0) {
             return res.status(200).json({ success: true, count: 0, message: 'No recipients found' });
@@ -230,7 +247,6 @@ async function handleBroadcast(req: VercelRequest, res: VercelResponse, user: an
         });
 
     } catch (e: any) {
-        console.error("Broadcast failed:", e);
         return res.status(500).json({ error: 'Failed to broadcast' });
     }
 }
@@ -246,7 +262,50 @@ async function handleTestEmail(req: VercelRequest, res: VercelResponse, user: an
         await emailLib.sendBroadcastEmail(email, 'ExaminePro SMTP Test', '<h1>SMTP Configured Successfully</h1><p>Your email system is working.</p>');
         return res.status(200).json({ success: true, message: 'Test email sent to ' + email });
     } catch (e: any) {
-        console.error("Test email failed:", e);
         return res.status(500).json({ success: false, error: 'Test failed: ' + e.message });
     }
+}
+
+async function handleSettings(req: VercelRequest, res: VercelResponse, user: any, isSuperAdmin: boolean) {
+    if (req.method === 'GET') {
+        const settings = await db.systemSettings.findMany();
+        const config: Record<string, any> = {};
+
+        settings.forEach(s => {
+            if (s.key === 'dbConfigs' || s.key === 'apiKeys' || s.key === 'oauthConfig') {
+                if (isSuperAdmin) {
+                    try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = {}; }
+                }
+            } else if (s.key === 'branding') {
+                try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = {}; }
+            } else {
+                config[s.key] = s.value;
+            }
+        });
+
+        if (config.aiGradingEnabled === 'true') config.aiGradingEnabled = true;
+        if (config.aiGradingEnabled === 'false') config.aiGradingEnabled = false;
+        if (config.maintenanceMode === 'true') config.maintenanceMode = true;
+        if (config.maintenanceMode === 'false') config.maintenanceMode = false;
+
+        return res.status(200).json(config);
+    }
+
+    if (req.method === 'POST') {
+        if (!isSuperAdmin) return res.status(403).json({ error: 'Forbidden: Superadmin only' });
+
+        const updates: Record<string, any> = req.body;
+        const prismaPromises = Object.entries(updates).map(([key, value]) => {
+            const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+            return db.systemSettings.upsert({
+                where: { key },
+                update: { value: stringValue },
+                create: { key, value: stringValue }
+            });
+        });
+
+        await db.$transaction(prismaPromises);
+        return res.status(200).json({ success: true });
+    }
+    return res.status(405).json({ error: 'Method not allowed' });
 }
