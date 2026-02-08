@@ -176,8 +176,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const limit = Number(req.query.limit) || 50;
             const skip = (page - 1) * limit;
 
+            console.log(`[Submissions] Fetching page ${page}, limit ${limit}, skip ${skip}, isAdmin ${isAdmin}`);
             let submissions, total;
             try {
+                // Verify count first
+                total = await db.submission.count();
+                console.log(`[Submissions] Total count in DB: ${total}`);
+
+                if (total === 0) {
+                    return res.status(200).json({
+                        data: [],
+                        pagination: { total: 0, page, limit, totalPages: 0 }
+                    });
+                }
+
                 [submissions, total] = await Promise.all([
                     db.submission.findMany({
                         skip,
