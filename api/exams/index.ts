@@ -62,10 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     durationMinutes: durationMinutes || 30,
                     timerSettings: timerSettings || {},
                     gradingPolicy: gradingPolicy || {},
-                    published: published !== undefined ? published : false, // Respect payload, default to false
+                    published: published !== undefined ? published : false,
                     resultRelease: 'INSTANT',
                     questions: {
-                        connect: questionConnect
+                        connect: questionConnect // Reuse existing questions
                     }
                 },
                 include: {

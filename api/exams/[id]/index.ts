@@ -74,18 +74,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Prepare update data
             const updateData: any = { ...scalars };
 
-            // Handle Questions Update (Replace Strategy)
+            // Handle Questions Update (Many-to-Many: Re-link)
             if (questions && Array.isArray(questions)) {
                 updateData.questions = {
-                    deleteMany: {}, // Remove old questions
-                    create: questions.map((q: any) => ({
-                        text: q.text,
-                        type: q.type,
-                        options: q.options || [],
-                        correctAnswer: q.correctAnswer,
-                        points: q.points || 1,
-                        explanation: q.explanation
-                    }))
+                    set: questions.map((q: any) => ({ id: q.id })) // Replace all links with new set
                 };
             }
 

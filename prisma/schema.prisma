@@ -92,24 +92,15 @@ model Exam {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  questions       Question[]
+  questions       Question[]    @relation("ExamQuestions")
   submissions     Submission[]
 }
 
 model Question {
   id            String       @id @default(uuid())
-  examId        String?
-  type          QuestionType
-  text          String
-  imageUrl      String?
-  options       String[]     // For MCQ/SBA
-  correctAnswer String       // STORED SECURELY ON SERVER
-  points        Float
-  category      String?
-  
   createdAt     DateTime     @default(now())
 
-  exam          Exam?        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exams         Exam[]       @relation("ExamQuestions")
 }
 
 model Submission {
