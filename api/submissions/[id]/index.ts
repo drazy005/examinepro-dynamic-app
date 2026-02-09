@@ -132,6 +132,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const updates = req.body;
             delete updates.id; // Ensure ID is not updated
+            delete updates.studentId; // Remove non-schema field
+            delete updates.submittedAt; // Remove to prevent type mismatch (string vs Date) and preserve start time
 
             // Security: Prevent candidates from modifying critical fields directly
             if (!isAdmin) {
