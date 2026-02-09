@@ -100,9 +100,8 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
       try {
         // Fetch exam details to check for duration updates
         // In a real app, this should be an optimized lightweight endpoint
-        const res = await fetch(`/api/exams/${exam.id}`);
-        if (res.ok) {
-          const updatedExam: Exam = await res.json();
+        try {
+          const updatedExam = await api.exams.get(exam.id);
           // If duration increased, add the difference to timeLeft
           if (updatedExam.durationMinutes > exam.durationMinutes) {
             const addedMinutes = updatedExam.durationMinutes - exam.durationMinutes;
@@ -112,6 +111,8 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
             // Note: Mutating prop is not ideal React, but effective for this local interval context without refetching parent
             // Ideally we'd use a ref or parent state, but this meets the "dynamic" requirement nicely.
           }
+        } catch (err) {
+          // Silent fail on poll
         }
       } catch (e) {
         // Silent fail on poll

@@ -139,28 +139,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   };
 
   const handleBatchImport = async (importedQuestions: Partial<Question>[]) => {
-    // In a real app we'd call the API: await api.questions.batchImport(importedQuestions);
-    // For now, we simulate it or use the hook if available.
-    // The useQuestions hook doesn't support batch yet, so we loop or call api direct.
-    // Let's call the new API endpoint we created.
+    setIsImporting(true);
     try {
-      const res = await fetch('/api/questions/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(importedQuestions.map(q => ({
-          ...q,
-          examId: null, // Global bank
-          createdAt: Date.now()
-        })))
-      });
-      if (!res.ok) throw new Error('Import failed');
-      addToast(`Successfully imported ${importedQuestions.length} questions.`, 'success');
-      // Force refresh would be ideal, but for now our hook might not auto-update unless we invalidate.
-      // We'll manually inject them into the local cache if possible or just rely on re-fetch.
-      // For this refactor, let's just reload window or tell user to refresh.
+      // Use the API client instead of direct fetch to ensure correct endpoint and error handling
+      const res = await api.questions.import(importedQuestions);
+      addToast(`Successfully imported ${res.count || importedQuestions.length} questions.`, 'success');
+
+      // Refresh questions list
+      // Invalidate cache or force reload. For now, we'll reload window to be safe.
       setTimeout(() => window.location.reload(), 1000);
-    } catch (e) {
-      addToast('Import failed. Check format.', 'error');
+      setIsImporting(false);
+    } catch (e: any) {
+      console.error("Batch Import Error:", e);
+      // Re-throw so the modal can display it
+      throw e;
     }
   };
 

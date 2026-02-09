@@ -62,7 +62,6 @@ export const api = {
   questions: {
     list: () => request<Question[]>('/questions'),
     create: (data: Partial<Question>) => request<Question>('/questions', { method: 'POST', body: JSON.stringify(data) }),
-    // Using query params for update/delete/import since we merged [id].ts and batch.ts
     update: (id: string, data: Partial<Question>) => request<Question>(`/questions?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/questions?id=${id}`, { method: 'DELETE' }),
 
@@ -71,12 +70,11 @@ export const api = {
   },
   exams: {
     list: (mode: 'all' | 'available' = 'all') => request<Exam[]>(`/exams?mode=${mode}`),
-    get: (id: string) => request<Exam>(`/exams/${id}`),
+    get: (id: string) => request<Exam>(`/exams?id=${id}`),
     create: (data: Partial<Exam>) => request<Exam>('/exams', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: Partial<Exam>) => request<Exam>(`/exams/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id: string) => request<void>(`/exams/${id}`, { method: 'DELETE' }),
-    releaseResults: (id: string) => request<void>(`/exams/${id}?action=release`, { method: 'POST' }),
-    // Start Exam moved to submissions logic
+    update: (id: string, data: Partial<Exam>) => request<Exam>(`/exams?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/exams?id=${id}`, { method: 'DELETE' }),
+    releaseResults: (id: string) => request<void>(`/exams?id=${id}&action=release`, { method: 'POST' }),
     start: (examId: string) => request<{ exam: Exam, startTime: number, submissionId: string, answersDraft?: any, resumed?: boolean }>('/submissions?action=start', { method: 'POST', body: JSON.stringify({ examId }) }),
   },
   submissions: {
@@ -84,15 +82,15 @@ export const api = {
       const qs = new URLSearchParams(params as any).toString();
       return request<{ data: Submission[], pagination: any } | Submission[]>(`/submissions?${qs}`);
     },
-    get: (id: string) => request<Submission>(`/submissions/${id}`),
+    get: (id: string) => request<Submission>(`/submissions?id=${id}`),
     create: (data: any) => request<Submission>('/submissions', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: any) => request<Submission>(`/submissions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    update: (id: string, data: any) => request<Submission>(`/submissions?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     saveDraft: (submissionId: string, answers: any) => request<void>('/submissions?action=draft', { method: 'POST', body: JSON.stringify({ submissionId, answers }) }),
-    grade: (submissionId: string, questionId: string, result: any) => request<void>(`/submissions/${submissionId}?action=grade`, { method: 'POST', body: JSON.stringify({ questionId, result }) }),
-    release: (submissionId: string) => request<void>(`/submissions/${submissionId}?action=release`, { method: 'POST' }),
+    grade: (submissionId: string, questionId: string, result: any) => request<void>(`/submissions?id=${submissionId}&action=grade`, { method: 'POST', body: JSON.stringify({ questionId, result }) }),
+    release: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=release`, { method: 'POST' }),
     releaseAll: () => request<void>('/submissions?action=release-all', { method: 'POST' }),
-    aiGrade: (submissionId: string) => request<void>(`/submissions/${submissionId}?action=ai-grade`, { method: 'POST' }),
-    bulkDelete: (ids: string[]) => Promise.all(ids.map(id => request<void>(`/submissions/${id}`, { method: 'DELETE' }))),
+    aiGrade: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=ai-grade`, { method: 'POST' }),
+    bulkDelete: (ids: string[]) => request<void>(`/submissions?ids=${ids.join(',')}`, { method: 'DELETE' }),
   },
   admin: {
     users: Object.assign(
