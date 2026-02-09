@@ -599,8 +599,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
         activeTab === 'exams' && (
           <div className="px-4 space-y-8">
             {isCreating ? (
-              <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm animate-in zoom-in-95">
-                <h2 className="font-black text-2xl uppercase mb-6">Create New Exam</h2>
+              <div className="bg-white dark:bg-slate-900 p-10 theme-rounded shadow-sm animate-in zoom-in-95 relative">
+                <button onClick={() => setIsCreating(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <h2 className="font-black text-2xl uppercase mb-6">{editingExam.id ? 'Edit Exam' : 'Create New Exam'}</h2>
                 <div className="space-y-6">
                   <div>
                     <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Exam Title</label>
@@ -636,9 +639,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                       <p className="text-[10px] text-slate-400 mt-1">Leave blank to publish immediately.</p>
                     </div>
                     <div>
+                    </div>
+                    <div>
                       <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Warning Threshold (Min)</label>
                       <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.timerSettings?.warningThresholdMinutes || 5} onChange={e => setEditingExam({ ...editingExam, timerSettings: { ...editingExam.timerSettings!, warningThresholdMinutes: parseInt(e.target.value) || 5 } })} />
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="publishedParams"
+                      checked={editingExam.published || false}
+                      onChange={e => setEditingExam({ ...editingExam, published: e.target.checked })}
+                      className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                    />
+                    <label htmlFor="publishedParams" className="text-sm font-bold text-slate-700 dark:text-slate-300 select-none cursor-pointer">
+                      Publish Immediately (Visible to Candidates)
+                    </label>
                   </div>
 
                   <div className="flex gap-4">
@@ -713,8 +731,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                               e.stopPropagation(); onTogglePublish(exam.id, !exam.published);
                             }} className={`text-xs font-bold uppercase hover:underline z-10 ${exam.published ? 'text-slate-400' : 'text-green-600'}`}>{exam.published ? 'Hide' : 'Publish'}</button>
 
-                            <button onClick={(e) => {
-                              e.stopPropagation(); setEditingExam(exam); setIsCreating(true);
+                            <button onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const fullExam = await api.exams.get(exam.id);
+                                setEditingExam(fullExam);
+                                setIsCreating(true);
+                              } catch (err) {
+                                addToast("Failed to load exam details.", "error");
+                              }
                             }} className="text-indigo-600 text-xs font-bold uppercase hover:underline z-10">Edit</button>
 
                             <button onClick={(e) => {
