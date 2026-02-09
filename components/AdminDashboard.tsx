@@ -208,7 +208,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
       id: editingExam.id || uuidv4(),
       title: sanitize(editingExam.title || 'New Exam'),
       totalPoints: (editingExam.questions || []).reduce((sum, q) => sum + q.points, 0),
-      published: true,
+      published: editingExam.published ?? false,
       version: (editingExam.version || 0) + 1,
       createdAt: editingExam.createdAt || Date.now()
     } as Exam;

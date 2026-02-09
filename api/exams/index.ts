@@ -83,12 +83,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(403).json({ error: 'Access denied' });
                 }
 
-                const { id: _id, createdAt: _created, questions, author, collaborators, ...scalars } = req.body;
-                const updateData: any = { ...scalars };
+                const {
+                    title, description, category, difficulty, durationMinutes,
+                    warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
+                    showMcqScoreImmediately, passMark, totalPoints, published,
+                    version, resultRelease, reviewed, timerSettings, gradingPolicy,
+                    questions, collaborators
+                } = req.body;
+
+                const updateData: any = {
+                    title, description, category, difficulty, durationMinutes,
+                    warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
+                    showMcqScoreImmediately, passMark, totalPoints, published,
+                    version, resultRelease, reviewed, timerSettings, gradingPolicy
+                };
+
+                // Remove undefined keys to allow partial updates (if intended)
+                // However, req.body usually sends null for unset things if stringified, or missing if not.
+                // Safest to delete undefineds.
+                Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
                 if (questions && Array.isArray(questions)) {
                     updateData.questions = {
                         set: questions.map((q: any) => ({ id: q.id }))
+                    };
+                }
+
+                if (collaborators && Array.isArray(collaborators)) {
+                    updateData.collaborators = {
+                        set: collaborators.map((c: any) => ({ id: c.id }))
                     };
                 }
 
@@ -98,6 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
                 return res.status(200).json(updated);
             } catch (e: any) {
+                console.error("Exam Update Failed:", e);
                 return res.status(500).json({ error: 'Update failed: ' + e.message });
             }
         }
@@ -157,10 +181,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST') {
         if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
         try {
-            const { title, description, category, difficulty, durationMinutes, timerSettings, gradingPolicy, questions, published } = req.body;
+            const {
+                title, description, category, difficulty, durationMinutes,
+                timerSettings, gradingPolicy, questions, published,
+                collaborators, passMark, totalPoints,
+                warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
+                showMcqScoreImmediately, resultRelease
+            } = req.body;
 
             const questionConnect = questions && Array.isArray(questions)
                 ? questions.map((q: any) => ({ id: q.id }))
+                : [];
+
+            const collaboratorConnect = collaborators && Array.isArray(collaborators)
+                ? collaborators.map((c: any) => ({ id: c.id }))
                 : [];
 
             const exam = await db.exam.create({
@@ -173,9 +207,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     timerSettings: timerSettings || {},
                     gradingPolicy: gradingPolicy || {},
                     published: published !== undefined ? published : false,
-                    resultRelease: 'INSTANT',
+                    resultRelease: resultRelease || 'INSTANT',
+
+                    // Add missing fields to create that were available in schema
+                    passMark: passMark !== undefined ? passMark : 50,
+                    totalPoints: totalPoints || 0,
+                    warningTimeThreshold: warningTimeThreshold || 5,
+                    resultReleaseMode: resultReleaseMode || 'MANUAL',
+                    scheduledReleaseDate: scheduledReleaseDate,
+                    showMcqScoreImmediately: showMcqScoreImmediately || false,
+
                     author: { connect: { id: user.userId } },
-                    questions: { connect: questionConnect }
+                    questions: { connect: questionConnect },
+                    collaborators: { connect: collaboratorConnect }
                 },
                 include: { questions: true }
             });
