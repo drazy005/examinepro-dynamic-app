@@ -90,76 +90,82 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ onImport, onClose }) 
                     });
                 }
             }
-        } catch (e) {
+        } catch (e: any) {
+            console.error(e);
             if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-                parseErrors.push("JSON Syntax Error: Check braces and quotes.");
+                parseErrors.push(`JSON Parsing Failed: ${e.message}`);
             }
         }
 
         // 2. CSV / PSV Mode (Only if JSON failed or empty)
         if (!isJson && parsed.length === 0) {
-            lines.forEach((line, idx) => {
-                const cleanLine = line.trim();
-                if (!cleanLine) return;
+            // If it looked like JSON but failed parse, don't try CSV, just show JSON error
+            if (parseErrors.length > 0) {
+                // Do nothing, let it fall through to error display
+            } else {
+                lines.forEach((line, idx) => {
+                    const cleanLine = line.trim();
+                    if (!cleanLine) return;
 
-                // Support Pipe (|) 
-                const parts = cleanLine.split('|').map(s => s.trim());
+                    // Support Pipe (|) 
+                    const parts = cleanLine.split('|').map(s => s.trim());
 
-                if (parts.length >= 2) {
-                    const [rawText, rawType, rawCorrect, rawOpts] = parts;
+                    if (parts.length >= 2) {
+                        const [rawText, rawType, rawCorrect, rawOpts] = parts;
 
-                    const text = sanitize(rawText);
-                    if (!text) return;
+                        const text = sanitize(rawText);
+                        if (!text) return;
 
-                    let type = QuestionType.MCQ;
-                    const typeUpper = rawType?.toUpperCase() || '';
-                    if (typeUpper === 'SBA') type = QuestionType.SBA;
-                    else if (typeUpper === 'THEORY') type = QuestionType.THEORY;
+                        let type = QuestionType.MCQ;
+                        const typeUpper = rawType?.toUpperCase() || '';
+                        if (typeUpper === 'SBA') type = QuestionType.SBA;
+                        else if (typeUpper === 'THEORY') type = QuestionType.THEORY;
 
-                    // Clean Options (Handle simple comma split)
-                    const options = rawOpts
-                        ? rawOpts.split(',').map(o => sanitize(o)).filter(Boolean)
-                        : [];
+                        // Clean Options (Handle simple comma split)
+                        const options = rawOpts
+                            ? rawOpts.split(',').map(o => sanitize(o)).filter(Boolean)
+                            : [];
 
-                    // Validation: Max 5 Options
-                    if (type !== QuestionType.THEORY && options.length > 5) {
-                        parseErrors.push(`Item "${text.substring(0, 20)}...": Too many options (Max 5). Found ${options.length}.`);
-                        return;
-                    }
-
-                    let correctAnswer = sanitize(rawCorrect || '');
-
-                    // Map Letter Answers (A, B, C...) to Option Text
-                    if (/^[A-E]$/i.test(correctAnswer) && options.length > 0) {
-                        const index = correctAnswer.toUpperCase().charCodeAt(0) - 65; // A=0, B=1...
-                        if (options[index]) {
-                            correctAnswer = options[index];
+                        // Validation: Max 5 Options
+                        if (type !== QuestionType.THEORY && options.length > 5) {
+                            parseErrors.push(`Line ${idx + 1}: Too many options (Max 5). Found ${options.length}.`);
+                            return;
                         }
-                    }
 
-                    // Validation: Answer must exist for non-theory
-                    if (type !== QuestionType.THEORY && !correctAnswer) {
-                        parseErrors.push(`Item "${text.substring(0, 20)}...": Missing correct answer.`);
-                        return;
-                    }
+                        let correctAnswer = sanitize(rawCorrect || '');
 
-                    parsed.push({
-                        id: uuidv4(),
-                        text,
-                        type,
-                        correctAnswer,
-                        options,
-                        points: type === QuestionType.THEORY ? 10 : 1,
-                        category: 'General'
-                    });
-                } else if (cleanLine.length > 0) {
-                    // parseErrors.push(`Line ${idx + 1}: Check separators ( | ).`);
-                }
-            });
+                        // Map Letter Answers (A, B, C...) to Option Text
+                        if (/^[A-E]$/i.test(correctAnswer) && options.length > 0) {
+                            const index = correctAnswer.toUpperCase().charCodeAt(0) - 65; // A=0, B=1...
+                            if (options[index]) {
+                                correctAnswer = options[index];
+                            }
+                        }
+
+                        // Validation: Answer must exist for non-theory
+                        if (type !== QuestionType.THEORY && !correctAnswer) {
+                            parseErrors.push(`Line ${idx + 1}: Missing correct answer.`);
+                            return;
+                        }
+
+                        parsed.push({
+                            id: uuidv4(),
+                            text,
+                            type,
+                            correctAnswer,
+                            options,
+                            points: type === QuestionType.THEORY ? 10 : 1,
+                            category: 'General'
+                        });
+                    } else if (cleanLine.length > 0) {
+                        // parseErrors.push(`Line ${idx + 1}: Check separators ( | ).`);
+                    }
+                });
+            }
         }
 
         if (parsed.length === 0) {
-            setError(parseErrors.length > 0 ? parseErrors.join('\n') : 'No valid questions parsed. Please check the examples.');
+            setError(parseErrors.length > 0 ? parseErrors.join('\n') : 'No valid questions found. Please use the examples above to check your format.');
         } else {
             setPreview(parsed);
         }
