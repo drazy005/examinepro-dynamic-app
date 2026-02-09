@@ -702,7 +702,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                     <div key={exam.id} className="p-6 border rounded-2xl bg-slate-50 dark:bg-slate-800 hover:border-indigo-500 transition-colors group cursor-pointer" onClick={() => onPreviewExam(exam)}>
                       <h3 className="font-bold text-lg mb-2">{exam.title}</h3>
                       <div className="flex gap-2 text-[10px] font-black uppercase text-slate-400">
-                        <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.questions.length} Qs</span>
+                        <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.questions?.length || 0} Qs</span>
                         <span className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">{exam.durationMinutes} m</span>
                       </div>
                       <div className="mt-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

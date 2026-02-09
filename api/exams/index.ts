@@ -39,7 +39,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST') {
         if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
         try {
-            const { title, description, category, difficulty, durationMinutes, timerSettings, gradingPolicy } = req.body;
+            const { title, description, category, difficulty, durationMinutes, timerSettings, gradingPolicy, questions, published } = req.body;
+
+            const questionConnect = questions && Array.isArray(questions)
+                ? questions.map((q: any) => ({ id: q.id }))
+                : [];
+
             const exam = await db.exam.create({
                 data: {
                     title: title || 'Untitled Exam',
@@ -49,12 +54,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     durationMinutes: durationMinutes || 30,
                     timerSettings: timerSettings || {},
                     gradingPolicy: gradingPolicy || {},
-                    published: false,
-                    resultRelease: 'INSTANT'
+                    published: published !== undefined ? published : false, // Respect payload, default to false
+                    resultRelease: 'INSTANT',
+                    questions: {
+                        connect: questionConnect
+                    }
+                },
+                include: {
+                    questions: true
                 }
             });
             return res.status(200).json(exam);
         } catch (e) {
+            console.error(e);
             return res.status(500).json({ error: 'Failed to create exam' });
         }
     }
