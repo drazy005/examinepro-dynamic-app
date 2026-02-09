@@ -52,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 options: q.options || [],
                 correctAnswer: q.correctAnswer || '',
                 points: q.points || 1,
-                examId: q.examId || undefined
+                // examId removed as it's not in the model anymore (Many-to-Many)
             }));
 
             try {

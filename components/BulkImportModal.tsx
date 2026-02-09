@@ -125,8 +125,9 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ onImport, onClose }) 
         try {
             await onImport(preview);
             onClose();
-        } catch (e) {
-            setError('Import failed on server.');
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || 'Import failed on server.');
         } finally {
             setIsProcessing(false);
         }
@@ -188,8 +189,8 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ onImport, onClose }) 
                                             </p>
                                         </div>
                                         <span className={`text-[9px] font-black uppercase px-2 py-1 rounded ${q.type === 'THEORY' ? 'bg-purple-100 text-purple-700' :
-                                                q.type === 'SBA' ? 'bg-emerald-100 text-emerald-700' :
-                                                    'bg-blue-100 text-blue-700'
+                                            q.type === 'SBA' ? 'bg-emerald-100 text-emerald-700' :
+                                                'bg-blue-100 text-blue-700'
                                             }`}>{q.type}</span>
                                     </div>
                                 </div>
