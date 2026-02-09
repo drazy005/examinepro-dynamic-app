@@ -20,7 +20,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { mode } = req.query; // ?mode=available
         if (mode === 'available') {
             const exams = await db.exam.findMany({
-                where: { published: true },
+                where: {
+                    published: true,
+                    // Exclude exams where this user has a submission
+                    submissions: {
+                        none: {
+                            userId: user.userId
+                        }
+                    }
+                },
                 orderBy: { createdAt: 'desc' }
                 // select/include nothing for questions to keep list lightweight
             });
