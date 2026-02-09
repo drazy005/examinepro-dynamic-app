@@ -140,6 +140,10 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
   }, [submissionId, isAdminPreview]);
 
   const handleSubmit = useCallback(() => {
+    if (isAdminPreview) {
+      alert("This is a preview. Submission is disabled to prevent data contamination.");
+      return;
+    }
     if (isSubmitting) return;
 
     // Warning for unanswered questions (Skip if auto-submitting due to timeout)

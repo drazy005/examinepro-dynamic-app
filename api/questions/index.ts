@@ -70,10 +70,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // PUT: Update
         if (req.method === 'PUT') {
             try {
-                const { type, text, options, correctAnswer, points, category, imageUrl } = req.body;
+                const question = await db.question.findUnique({
+                    where: { id },
+                    include: { collaborators: { select: { id: true } } }
+                });
+
+                if (!question) return res.status(404).json({ error: 'Question not found' });
+
+                // Permission Check
+                const isAuthor = question.authorId === user.userId;
+                const isCollaborator = question.collaborators.some(c => c.id === user.userId);
+                const isSuperAdmin = user.role === 'SUPERADMIN';
+
+                if (!isAuthor && !isCollaborator && !isSuperAdmin) {
+                    return res.status(403).json({ error: 'Access denied' });
+                }
+
+                const { type, text, options, correctAnswer, points, category, imageUrl, collaborators } = req.body;
+
+                // Construct update data
+                const updateData: any = { type, text, options, correctAnswer, points, category, imageUrl };
+
+                // Handle Collaborators Update (if provided)
+                if (collaborators && Array.isArray(collaborators)) {
+                    updateData.collaborators = {
+                        set: collaborators.map((c: any) => ({ id: c.id || c }))
+                    };
+                }
+
                 const updated = await db.question.update({
                     where: { id },
-                    data: { type, text, options, correctAnswer, points, category, imageUrl }
+                    data: updateData
                 });
                 return res.status(200).json(updated);
             } catch (e: any) {
@@ -84,14 +111,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // DELETE: Single
         if (req.method === 'DELETE') {
             try {
+                const question = await db.question.findUnique({ where: { id } });
+                if (!question) return res.status(404).json({ error: 'Question not found' });
+
+                // Permission Check: Author OR SuperAdmin ONLY
+                const isAuthor = question.authorId === user.userId;
+                const isSuperAdmin = user.role === 'SUPERADMIN';
+
+                if (!isAuthor && !isSuperAdmin) {
+                    return res.status(403).json({ error: 'Access denied: Only author can delete.' });
+                }
+
                 await db.question.delete({ where: { id } });
                 return res.status(200).json({ success: true });
             } catch (e: any) {
                 return res.status(500).json({ error: `Failed to delete question: ${e.message}` });
             }
         }
-        // Note: GET single question usually not needed, as list returns all. 
-        // But if needed, add here.
     }
 
     // === STANDARD OPERATIONS ===
@@ -101,7 +137,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
             const questions = await db.question.findMany({
                 orderBy: { createdAt: 'desc' },
-                include: { exam: { select: { title: true } } }
+                include: {
+                    exams: { select: { title: true } },
+                    author: { select: { id: true, name: true } },
+                    collaborators: { select: { id: true, name: true } }
+                }
             });
             return res.status(200).json(questions);
         } catch (e: any) {
@@ -113,17 +153,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // POST: Create
     if (req.method === 'POST') {
         try {
-            const { type, text, options, correctAnswer, points, category, imageUrl } = req.body;
+            const { type, text, options, correctAnswer, points, category, imageUrl, collaborators } = req.body;
+
+            const createData: any = {
+                type: type || 'MCQ',
+                text: text || 'New Question',
+                options: options || [],
+                correctAnswer: correctAnswer || '',
+                points: points || 1,
+                category,
+                imageUrl,
+                author: { connect: { id: user.userId } }
+            };
+
+            if (collaborators && Array.isArray(collaborators)) {
+                createData.collaborators = {
+                    connect: collaborators.map((c: any) => ({ id: c.id || c }))
+                };
+            }
+
             const q = await db.question.create({
-                data: {
-                    type: type || 'MCQ',
-                    text: text || 'New Question',
-                    options: options || [],
-                    correctAnswer: correctAnswer || '',
-                    points: points || 1,
-                    category,
-                    imageUrl
-                }
+                data: createData,
+                include: { author: true, collaborators: true }
             });
             return res.status(200).json(q);
         } catch (e: any) {
@@ -131,8 +182,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
-    // DELETE: Purge
+    // DELETE: Purge (SuperAdmin Only)
     if (req.method === 'DELETE' && mode === 'purge') {
+        if (user.role !== 'SUPERADMIN') return res.status(403).json({ error: 'SuperAdmin only' });
+
         const whereClause: any = {};
         if (type && type !== 'ALL') whereClause.type = type;
         await db.question.deleteMany({ where: whereClause });

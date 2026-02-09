@@ -67,9 +67,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // PUT: Update
     if (req.method === 'PUT') {
-        if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
         try {
-            const { id: _id, createdAt: _created, questions, ...scalars } = req.body;
+            const exam = await db.exam.findUnique({
+                where: { id },
+                include: { collaborators: { select: { id: true } } }
+            });
+
+            if (!exam) return res.status(404).json({ error: 'Exam not found' });
+
+            // Permission Check: Author OR Collaborator OR SuperAdmin
+            const isAuthor = exam.authorId === user.userId;
+            const isCollaborator = exam.collaborators.some(c => c.id === user.userId);
+            const isSuperAdmin = user.role === 'SUPERADMIN';
+
+            if (!isAdmin || (!isAuthor && !isCollaborator && !isSuperAdmin)) {
+                return res.status(403).json({ error: 'Access denied: You are not an author or collaborator.' });
+            }
+
+            const { id: _id, createdAt: _created, questions, author, collaborators, ...scalars } = req.body;
 
             // Prepare update data
             const updateData: any = { ...scalars };
@@ -94,9 +109,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // DELETE
     if (req.method === 'DELETE') {
-        if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
-        await db.exam.delete({ where: { id } });
-        return res.status(200).json({ success: true });
+        try {
+            const exam = await db.exam.findUnique({ where: { id } });
+            if (!exam) return res.status(404).json({ error: 'Exam not found' });
+
+            // Permission Check: Author OR SuperAdmin ONLY (Collaborators cannot delete)
+            const isAuthor = exam.authorId === user.userId;
+            const isSuperAdmin = user.role === 'SUPERADMIN';
+
+            if (!isAdmin || (!isAuthor && !isSuperAdmin)) {
+                return res.status(403).json({ error: 'Access denied: Only the author can delete this exam.' });
+            }
+
+            await db.exam.delete({ where: { id } });
+            return res.status(200).json({ success: true });
+        } catch (e) {
+            return res.status(500).json({ error: 'Delete failed' });
+        }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

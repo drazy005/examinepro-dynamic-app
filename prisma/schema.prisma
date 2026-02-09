@@ -65,6 +65,12 @@ model User {
   submissions   Submission[]
   auditLogs     AuditLog[]
   blogPosts     BlogPost[]
+  
+  // Ownership Relations
+  authoredExams         Exam[]     @relation("ExamAuthor")
+  collaboratingExams    Exam[]     @relation("ExamCollaborators")
+  authoredQuestions     Question[] @relation("QuestionAuthor")
+  collaboratingQuestions Question[] @relation("QuestionCollaborators")
 }
 
 model Exam {
@@ -94,13 +100,21 @@ model Exam {
 
   questions       Question[]    @relation("ExamQuestions")
   submissions     Submission[]
+  
+  // Ownership
+  author          User?         @relation("ExamAuthor", fields: [authorId], references: [id])
+  authorId        String?
+  collaborators   User[]        @relation("ExamCollaborators")
 }
 
 model Question {
-  id            String       @id @default(uuid())
   createdAt     DateTime     @default(now())
 
+  // Relationships
   exams         Exam[]       @relation("ExamQuestions")
+  author        User?        @relation("QuestionAuthor", fields: [authorId], references: [id])
+  authorId      String?
+  collaborators User[]       @relation("QuestionCollaborators")
 }
 
 model Submission {
@@ -121,7 +135,7 @@ model Submission {
   timeSpentMs           Int           @default(0)
 
   user                  User          @relation(fields: [userId], references: [id])
-  exam                  Exam          @relation(fields: [examId], references: [id])
+  exam                  Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {

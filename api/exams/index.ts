@@ -38,7 +38,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
         const exams = await db.exam.findMany({
             orderBy: { createdAt: 'desc' },
-            include: { questions: { select: { id: true } } }
+            include: {
+                questions: { select: { id: true } },
+                author: { select: { id: true, name: true, email: true } },
+                collaborators: { select: { id: true, name: true, email: true } }
+            }
         });
         return res.status(200).json(exams);
     }
@@ -64,6 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     gradingPolicy: gradingPolicy || {},
                     published: published !== undefined ? published : false,
                     resultRelease: 'INSTANT',
+                    author: { connect: { id: user.userId } }, // Assign Author
                     questions: {
                         connect: questionConnect // Reuse existing questions
                     }

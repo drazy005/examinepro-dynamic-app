@@ -612,6 +612,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
+                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Subject / Category</label>
+                      <div className="relative">
+                        <input list="categories" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.category} onChange={e => setEditingExam({ ...editingExam, category: e.target.value })} placeholder="e.g. Anatomy" />
+                        <datalist id="categories">
+                          <option value="General" />
+                          <option value="Anatomy" />
+                          <option value="Physiology" />
+                          <option value="Pathology" />
+                          <option value="Pharmacology" />
+                        </datalist>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Difficulty</label>
+                      <select className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.difficulty} onChange={e => setEditingExam({ ...editingExam, difficulty: e.target.value as Difficulty })}>
+                        <option value={Difficulty.EASY}>Easy</option>
+                        <option value={Difficulty.MEDIUM}>Medium</option>
+                        <option value={Difficulty.HARD}>Hard</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
                       <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Duration (Minutes)</label>
                       <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.durationMinutes} onChange={e => setEditingExam({ ...editingExam, durationMinutes: parseInt(e.target.value) || 0 })} />
                     </div>
@@ -641,8 +665,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                     <div>
                     </div>
                     <div>
-                      <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Warning Threshold (Min)</label>
                       <input type="number" className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.timerSettings?.warningThresholdMinutes || 5} onChange={e => setEditingExam({ ...editingExam, timerSettings: { ...editingExam.timerSettings!, warningThresholdMinutes: parseInt(e.target.value) || 5 } })} />
+                    </div>
+                  </div>
+
+                  {/* Collaborators Section */}
+                  <div className="bg-slate-50 dark:bg-slate-900 p-6 theme-rounded">
+                    <h3 className="font-bold uppercase text-xs text-slate-400 mb-4">Collaborators ({editingExam.collaborators?.length || 0}/5)</h3>
+                    <div className="flex gap-4 items-center mb-4">
+                      <select id="collabSelect" className="flex-1 p-3 rounded-xl bg-white dark:bg-slate-800 text-sm font-bold" defaultValue="">
+                        <option value="" disabled>Select Admin to add...</option>
+                        {users.filter(u =>
+                          (u.role === 'ADMIN' || u.role === 'SUPERADMIN') &&
+                          !editingExam.collaborators?.some(c => c.id === u.id) &&
+                          u.id !== editingExam.authorId // Don't show author
+                        ).map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                        ))}
+                      </select>
+                      <button onClick={() => {
+                        const select = document.getElementById('collabSelect') as HTMLSelectElement;
+                        const userId = select.value;
+                        if (!userId) return;
+
+                        const user = users.find(u => u.id === userId);
+                        if (user) {
+                          const current = editingExam.collaborators || [];
+                          if (current.length >= 5) { addToast("Max 5 collaborators allowed.", "error"); return; }
+                          setEditingExam({ ...editingExam, collaborators: [...current, user] });
+                          select.value = "";
+                        }
+                      }} className="bg-slate-800 text-white px-4 py-3 rounded-xl font-bold uppercase text-[10px]">Add</button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {editingExam.collaborators?.map(c => (
+                        <div key={c.id} className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-2 rounded-full border border-slate-200 dark:border-slate-700">
+                          <span className="text-xs font-bold">{c.name}</span>
+                          <button onClick={() => setEditingExam({ ...editingExam, collaborators: editingExam.collaborators?.filter(x => x.id !== c.id) })} className="text-red-500 hover:text-red-700">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
