@@ -108,7 +108,16 @@ model Exam {
 }
 
 model Question {
-  createdAt     DateTime     @default(now())
+  id              String       @id @default(uuid())
+  type            QuestionType @default(MCQ)
+  text            String
+  options         String[]
+  correctAnswer   String
+  points          Float        @default(1)
+  imageUrl        String?
+  category        String?
+  
+  createdAt       DateTime     @default(now())
 
   // Relationships
   exams         Exam[]       @relation("ExamQuestions")
