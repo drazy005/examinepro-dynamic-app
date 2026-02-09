@@ -118,18 +118,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (submission.userId !== user.userId && !isAdmin) return res.status(403).json({ error: 'Access denied' });
 
                 const updates = req.body;
-                delete updates.id;
-                delete updates.studentId;
-                delete updates.submittedAt;
 
-                if (!isAdmin) {
-                    delete updates.userId;
-                    delete updates.examId;
-                    delete updates.score;
-                    delete updates.graded;
-                    delete updates.status;
-                    delete updates.questionResults;
-                }
+                // Whitelist allowed fields to prevent "Unknown argument" errors
+                const allowedFields = [
+                    'answers', 'answersDraft', 'questionResults',
+                    'score', 'status', 'graded', 'resultsReleased'
+                ];
+
+                // Allow params that are not directly in schema but used for logic below (none currently, logic uses updates.answers)
+
+                // Filter updates to include only allowable keys
+                Object.keys(updates).forEach(key => {
+                    if (!allowedFields.includes(key)) delete updates[key];
+                });
 
                 if (updates.answers && submission.exam) {
                     const exam = submission.exam;

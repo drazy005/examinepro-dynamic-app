@@ -33,8 +33,9 @@ export const useExams = () => {
       );
       addToast('Exam saved successfully!', 'success');
       return saved;
-    } catch (err) {
-      addToast('Failed to save exam.', 'error');
+    } catch (err: any) {
+      console.error(err);
+      addToast(err.message || 'Failed to save exam.', 'error');
       throw err;
     }
   }, [exams, addToast]);

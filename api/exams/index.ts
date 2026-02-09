@@ -75,7 +75,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 if (!exam) return res.status(404).json({ error: 'Exam not found' });
 
+                // @ts-ignore
                 const isAuthor = exam.authorId === user.userId;
+                // @ts-ignore
                 const isCollaborator = exam.collaborators.some(c => c.id === user.userId);
                 const isSuperAdmin = user.role === 'SUPERADMIN';
 
@@ -88,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
                     showMcqScoreImmediately, passMark, totalPoints, published,
                     version, resultRelease, reviewed, timerSettings, gradingPolicy,
-                    questions, collaborators
+                    questions, collaborators, createdAt
                 } = req.body;
 
                 const updateData: any = {
@@ -98,10 +100,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     version, resultRelease, reviewed, timerSettings, gradingPolicy
                 };
 
-                // Remove undefined keys to allow partial updates (if intended)
-                // However, req.body usually sends null for unset things if stringified, or missing if not.
-                // Safest to delete undefineds.
+                // Explicit field conversions
+                if (createdAt) {
+                    // If frontend sends timestamp (number), convert to Date
+                    // If string, let Prisma handle or ensure ISO
+                    updateData.createdAt = typeof createdAt === 'number' ? new Date(createdAt) : createdAt;
+                }
+
+                // Remove undefined keys
                 Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
 
                 if (questions && Array.isArray(questions)) {
                     updateData.questions = {
