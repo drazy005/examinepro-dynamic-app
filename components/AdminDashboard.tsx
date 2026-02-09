@@ -524,7 +524,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                     }} className="bg-red-600 text-white px-4 py-3 rounded-xl font-bold uppercase text-[10px]">Delete ({selectedQuestionIds.size})</button>
                   )}
                   <div className="relative">
-                    <button onClick={() => setShowPurgeConfirm(!showPurgeConfirm)} className="bg-red-100 text-red-600 border border-red-200 px-4 py-3 rounded-xl font-bold uppercase text-[10px] hover:bg-red-200">Purge Data...</button>
+                    <button disabled={questionBank.length === 0} onClick={() => setShowPurgeConfirm(!showPurgeConfirm)} className="bg-red-100 text-red-600 border border-red-200 px-4 py-3 rounded-xl font-bold uppercase text-[10px] hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed">Purge Data...</button>
                     {showPurgeConfirm && (
                       <div className="absolute right-0 top-full mt-2 bg-white dark:bg-slate-900 shadow-xl rounded-xl border p-4 z-50 w-48 space-y-2">
                         <p className="text-[10px] font-black uppercase text-slate-400">Danger Zone</p>

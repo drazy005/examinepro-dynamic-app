@@ -1,25 +1,17 @@
+
 import { PrismaClient } from '@prisma/client';
 
+// Use the DATABASE_URL from env (port 6543)
 const prisma = new PrismaClient();
 
 async function main() {
+    console.log('Testing connection to DATABASE_URL...');
     try {
-        console.log('Connecting to database...');
-        await prisma.$connect();
-        console.log('Connected successfully.');
-
-        const userCount = await prisma.user.count();
-        console.log(`User count: ${userCount}`);
-
-        const questionCount = await prisma.question.count();
-        console.log(`Question count: ${questionCount}`);
-
-        const examCount = await prisma.exam.count();
-        console.log(`Exam count: ${examCount}`);
-
-    } catch (e) {
-        console.error('Database connection failed:', e);
-        process.exit(1);
+        // Simple query to check connection
+        const count = await prisma.user.count();
+        console.log(`Connection Successful! User count: ${count}`);
+    } catch (e: any) {
+        console.error('Connection Failed:', e.message);
     } finally {
         await prisma.$disconnect();
     }

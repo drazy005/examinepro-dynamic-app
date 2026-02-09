@@ -15,21 +15,25 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ onImport, onClose }) 
 
     const parseInput = () => {
         setError('');
-        const lines = inputText.trim().split('\n');
+        const trimmed = inputText.trim();
+        const lines = trimmed.split('\n');
         const parsed: Partial<Question>[] = [];
 
-        // Simple heuristic: If starts with {, assume JSON. Else assume CSV (Text,Type,Ans).
-        if (inputText.trim().startsWith('[')) {
-            try {
-                const json = JSON.parse(inputText);
-                if (Array.isArray(json)) {
-                    setPreview(json);
-                    return;
-                }
-            } catch (e) {
-                setError('Invalid JSON format.');
+        // Attempt JSON parse first regardless of starting char (could be wrapped)
+        try {
+            const json = JSON.parse(trimmed);
+            // Handle array directly
+            if (Array.isArray(json)) {
+                setPreview(json);
                 return;
             }
+            // Handle { "questions": [...] } format common in exports
+            if (json.questions && Array.isArray(json.questions)) {
+                setPreview(json.questions);
+                return;
+            }
+        } catch (e) {
+            // Not valid JSON, proceed to CSV/Text parsing
         }
 
         // CSV Mode
@@ -54,7 +58,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ onImport, onClose }) 
         });
 
         if (parsed.length === 0) {
-            setError('No valid questions found. Use format: Text | Type | Answer | Options');
+            setError('Could not parse input. formatting: JSON Array or "Text | Type | Answer | Options"');
         } else {
             setPreview(parsed);
         }
