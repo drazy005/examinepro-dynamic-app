@@ -142,13 +142,17 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
   const handleSubmit = useCallback(() => {
     if (isSubmitting) return;
 
-    // Warning for unanswered questions
-    const answeredCount = Object.keys(answers).length;
-    const totalQuestions = exam.questions.length;
-    if (answeredCount < totalQuestions) {
-      const remaining = totalQuestions - answeredCount;
-      if (!confirm(`You have ${remaining} unanswered questions. Are you sure you want to submit?`)) {
-        return;
+    // Warning for unanswered questions (Skip if auto-submitting due to timeout)
+    const isAutoSubmit = timeLeft <= 0;
+
+    if (!isAutoSubmit) {
+      const answeredCount = Object.keys(answers).length;
+      const totalQuestions = exam.questions.length;
+      if (answeredCount < totalQuestions) {
+        const remaining = totalQuestions - answeredCount;
+        if (!confirm(`You have ${remaining} unanswered questions. Are you sure you want to submit?`)) {
+          return;
+        }
       }
     }
 
@@ -160,7 +164,7 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
       // Do not send submittedAt, let server keep the original start time
       id: submissionId // Pass ID if updating existing
     });
-  }, [exam.id, studentId, answers, onSubmit, isSubmitting, exam.questions.length]);
+  }, [exam.id, studentId, answers, onSubmit, isSubmitting, exam.questions.length, timeLeft]);
 
   useEffect(() => {
     const autoSubmit = exam.timerSettings && exam.timerSettings.autoSubmitOnExpiry;

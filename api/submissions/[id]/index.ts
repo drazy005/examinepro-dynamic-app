@@ -131,6 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             const updates = req.body;
+            delete updates.id; // Ensure ID is not updated
 
             // Security: Prevent candidates from modifying critical fields directly
             if (!isAdmin) {

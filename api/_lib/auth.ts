@@ -31,7 +31,7 @@ export const authLib = {
     signToken: (payload: TokenPayload) => {
         const signFn = jwt.sign || (jwt as any).default?.sign;
         if (!signFn) throw new Error('jwt.sign is not available');
-        return signFn(payload, JWT_SECRET, { expiresIn: '7d' }); // 7 days session
+        return signFn(payload, JWT_SECRET, { expiresIn: '24h' }); // 24 hours session
     },
 
     // Verify JWT
@@ -52,7 +52,7 @@ export const authLib = {
             httpOnly: true,
             secure: isProd,
             sameSite: isProd ? 'none' : 'lax', // None + Secure is most robust for Prod HTTPS
-            maxAge: 60 * 60 * 24 * 7, // 7 days
+            maxAge: 60 * 60 * 24, // 24 hours
             path: '/',
         });
     },
