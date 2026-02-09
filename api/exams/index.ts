@@ -194,7 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 timerSettings, gradingPolicy, questions, published,
                 collaborators, passMark, totalPoints,
                 warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
-                showMcqScoreImmediately, resultRelease
+                showMcqScoreImmediately, resultRelease, createdAt
             } = req.body;
 
             const questionConnect = questions && Array.isArray(questions)
@@ -205,30 +205,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 ? collaborators.map((c: any) => ({ id: c.id }))
                 : [];
 
+            const createData: any = {
+                title: title || 'Untitled Exam',
+                description: description || '',
+                category: category || 'General',
+                difficulty: difficulty || 'MEDIUM',
+                durationMinutes: Number(durationMinutes) || 30,
+                timerSettings: timerSettings || {},
+                gradingPolicy: gradingPolicy || {},
+                published: published !== undefined ? published : false,
+                resultRelease: resultRelease || 'INSTANT',
+
+                passMark: passMark !== undefined ? Number(passMark) : 50,
+                totalPoints: totalPoints !== undefined ? Number(totalPoints) : 0,
+                warningTimeThreshold: warningTimeThreshold !== undefined ? Number(warningTimeThreshold) : 5,
+                resultReleaseMode: resultReleaseMode || 'MANUAL',
+                showMcqScoreImmediately: showMcqScoreImmediately || false,
+
+                // @ts-ignore
+                author: { connect: { id: user.userId } },
+                questions: { connect: questionConnect },
+                // @ts-ignore
+                collaborators: { connect: collaboratorConnect }
+            };
+
+            if (scheduledReleaseDate) {
+                createData.scheduledReleaseDate = typeof scheduledReleaseDate === 'number'
+                    ? new Date(scheduledReleaseDate)
+                    : scheduledReleaseDate;
+            }
+
+            // Remove keys that are undefined/NaN
+            Object.keys(createData).forEach(key => {
+                if (createData[key] === undefined) delete createData[key];
+            });
+
             const exam = await db.exam.create({
-                data: {
-                    title: title || 'Untitled Exam',
-                    description: description || '',
-                    category: category || 'General',
-                    difficulty: difficulty || 'MEDIUM',
-                    durationMinutes: durationMinutes || 30,
-                    timerSettings: timerSettings || {},
-                    gradingPolicy: gradingPolicy || {},
-                    published: published !== undefined ? published : false,
-                    resultRelease: resultRelease || 'INSTANT',
-
-                    // Add missing fields to create that were available in schema
-                    passMark: passMark !== undefined ? passMark : 50,
-                    totalPoints: totalPoints || 0,
-                    warningTimeThreshold: warningTimeThreshold || 5,
-                    resultReleaseMode: resultReleaseMode || 'MANUAL',
-                    scheduledReleaseDate: scheduledReleaseDate,
-                    showMcqScoreImmediately: showMcqScoreImmediately || false,
-
-                    author: { connect: { id: user.userId } },
-                    questions: { connect: questionConnect },
-                    collaborators: { connect: collaboratorConnect }
-                },
+                data: createData,
                 include: { questions: true }
             });
             return res.status(200).json(exam);
