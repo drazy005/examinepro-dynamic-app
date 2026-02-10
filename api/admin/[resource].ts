@@ -305,12 +305,18 @@ async function handleSettings(req: VercelRequest, res: VercelResponse, user: any
         const config: Record<string, any> = {};
 
         settings.forEach(s => {
-            if (s.key === 'dbConfigs' || s.key === 'apiKeys' || s.key === 'oauthConfig') {
-                if (isSuperAdmin) {
-                    try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = {}; }
+            // Whitelist keys that store JSON objects
+            const jsonKeys = ['dbConfigs', 'apiKeys', 'oauthConfig', 'branding', 'smtpConfig', 'timerSettings', 'gradingPolicy'];
+
+            if (jsonKeys.includes(s.key)) {
+                if (isSuperAdmin || s.key === 'branding') { // Branding is public-ish
+                    try {
+                        config[s.key] = JSON.parse(s.value);
+                    } catch {
+                        console.error(`Failed to parse setting: ${s.key}`);
+                        config[s.key] = {};
+                    }
                 }
-            } else if (s.key === 'branding') {
-                try { config[s.key] = JSON.parse(s.value); } catch { config[s.key] = {}; }
             } else {
                 config[s.key] = s.value;
             }
