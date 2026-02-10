@@ -42,8 +42,16 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
     const getResultDisplay = (sub: Submission) => {
         // Logic for "Submitted" vs "Score" based on release settings
         if (sub.resultsReleased) {
-            // Full Result
-            return <span className="text-green-600 font-bold">{sub.score}%</span>;
+            // Calculate percentage if possible
+            const total = sub.exam?.totalPoints || 0;
+            const percent = total > 0 ? Math.round((sub.score / total) * 100) : 0;
+
+            return (
+                <div className="flex flex-col">
+                    <span className="text-green-600 font-bold">{percent}%</span>
+                    <span className="text-xs text-slate-400">({sub.score} / {total})</span>
+                </div>
+            );
         }
         // If partial release (MCQ only) - To be implemented based on extended Submission type
         // For now, default to Pending

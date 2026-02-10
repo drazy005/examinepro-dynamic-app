@@ -66,6 +66,7 @@ const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
           </div>
           <div className="text-right flex flex-col items-end">
             <p className="text-6xl font-black tracking-tighter leading-none">{submission.score.toFixed(1)} <span className="text-xl font-normal opacity-40">/ {exam.totalPoints}</span></p>
+            <p className="text-right text-indigo-300 font-bold text-lg mt-1">{Math.round((submission.score / (exam.totalPoints || 1)) * 100)}%</p>
             <div className="flex gap-2 mt-4">
               {isAdmin && onReGrade && (
                 <button
