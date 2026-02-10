@@ -113,16 +113,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 if (questions && Array.isArray(questions)) {
                     updateData.questions = {
-                        set: questions.map((q: any) => ({ id: q.id }))
+                        set: questions.filter((q: any) => q && q.id).map((q: any) => ({ id: q.id }))
                     };
                 }
 
                 if (collaborators && Array.isArray(collaborators)) {
                     updateData.collaborators = {
-                        set: collaborators.map((c: any) => ({ id: c.id }))
+                        set: collaborators.filter((c: any) => c && c.id).map((c: any) => ({ id: c.id }))
                     };
                 }
-
                 const updated = await db.exam.update({
                     where: { id },
                     data: updateData
@@ -197,12 +196,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 showMcqScoreImmediately, resultRelease, createdAt
             } = req.body;
 
+            // Strict filtering for valid IDs to prevent "Argument id must not be null"
             const questionConnect = questions && Array.isArray(questions)
-                ? questions.map((q: any) => ({ id: q.id }))
+                ? questions.filter((q: any) => q && q.id).map((q: any) => ({ id: q.id }))
                 : [];
 
             const collaboratorConnect = collaborators && Array.isArray(collaborators)
-                ? collaborators.map((c: any) => ({ id: c.id }))
+                ? collaborators.filter((c: any) => c && c.id).map((c: any) => ({ id: c.id }))
                 : [];
 
             const createData: any = {
@@ -245,9 +245,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 include: { questions: true }
             });
             return res.status(200).json(exam);
-        } catch (e) {
-            console.error(e);
-            return res.status(500).json({ error: 'Failed to create exam' });
+        } catch (e: any) {
+            console.error("Exam Creation Failed:", e);
+            // Return author ID in error to help debug auth issues if any
+            return res.status(500).json({ error: `Create Failed. AuthorID: ${user?.userId}. Error: ${e.message}` });
         }
     }
 

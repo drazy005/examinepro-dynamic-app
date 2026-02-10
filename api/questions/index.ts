@@ -99,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // Handle Collaborators Update (if provided)
                 if (collaborators && Array.isArray(collaborators)) {
                     updateData.collaborators = {
-                        set: collaborators.map((c: any) => ({ id: c.id || c }))
+                        set: collaborators.filter((c: any) => c && (c.id || c)).map((c: any) => ({ id: c.id || c }))
                     };
                 }
 
@@ -176,7 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (collaborators && Array.isArray(collaborators)) {
                 createData.collaborators = {
-                    connect: collaborators.map((c: any) => ({ id: c.id || c }))
+                    connect: collaborators.filter((c: any) => c && (c.id || c)).map((c: any) => ({ id: c.id || c }))
                 };
             }
 
