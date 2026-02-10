@@ -78,8 +78,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     include: {
                         exam: {
                             select: {
-                                title: true, questions: {
-                                    select: { id: true, text: true, type: true, options: true, points: true, correctAnswer: isAdmin }
+                                title: true,
+                                questions: {
+                                    select: {
+                                        id: true, text: true, type: true, options: true, points: true,
+                                        correctAnswer: true // Always fetch, sanitize later
+                                    }
                                 }
                             }
                         },
@@ -92,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const mapped = { ...submission, gradingStatus: submission.status };
 
+                // Sanitize if NOT Admin AND NOT Released
                 if (!isAdmin && !submission.resultsReleased) {
                     const sanitizedSubmission = {
                         ...mapped,
@@ -103,6 +108,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     };
                     return res.status(200).json(sanitizedSubmission);
                 }
+
+                // If Released, Candidate can see correct answers.
                 return res.status(200).json(mapped);
             } catch (e) {
                 return res.status(500).json({ error: 'Failed to fetch submission' });

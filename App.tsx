@@ -213,18 +213,42 @@ const App: React.FC = () => {
   const [viewingSubmission, setViewingSubmission] = useState<{ sub: Submission, exam: Exam } | null>(null);
 
   const handleViewDetails = async (sub: Submission) => {
-    const exam = exams.find(e => e.id === sub.examId);
-    if (exam) {
-      setViewingSubmission({ sub, exam });
-    } else {
-      // Exam not in local list (maybe hidden or deleted from cache). Try fetching.
+    const handleViewDetails = async (sub: Submission) => {
       try {
-        const fullExam = await api.exams.get(sub.examId);
-        setViewingSubmission({ sub, exam: fullExam });
+        // Always try to get the full exam first from local cache if it has questions
+        let exam = exams.find(e => e.id === sub.examId);
+
+        // If local exam is missing or doesn't have questions loaded (e.g. from a list summary), fetch it.
+        if (!exam || !exam.questions || exam.questions.length === 0) {
+          try {
+            // Determine which API to use based on role. 
+            // Candidates might not have access to 'api.exams.get' if it's restricted to admins?
+            // api.exams.get checks db.exam.findUnique. 
+            // If the exam is published, candidates should be able to get it?
+            // Actually, api/exams/[id].ts usually restricts to Admin unless 'mode=take' or similar?
+            // Let's rely on the submission's embedded exam if possible? 
+            // But submission list only returned a subset?
+
+            // Better approach: Fetch the *Submission Details* endpoint!
+            // The GET /api/submissions/:id endpoint NOW returns the full exam object with questions (sanitized).
+            // So we should just fetch the submission detail.
+
+            const fullSubmission = await api.submissions.get(sub.id);
+            setViewingSubmission({ sub: fullSubmission, exam: fullSubmission.exam });
+            return;
+          } catch (e) {
+            console.error("Failed to fetch full submission details", e);
+            addToast("Could not load review details.", "error");
+            return;
+          }
+        }
+
+        // If we have a full exam locally (e.g. Admin view), use it.
+        setViewingSubmission({ sub, exam });
       } catch (e) {
-        addToast("Exam data not found (it may have been deleted).", "error");
+        addToast("Error opening review.", "error");
       }
-    }
+    };
   };
 
   const renderContent = () => {
