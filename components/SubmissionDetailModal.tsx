@@ -131,13 +131,55 @@ const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Student Answer</span>
                     <p className="font-medium text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{userAnswer || <span className="italic opacity-50">No Answer</span>}</p>
                   </div>
-                  {isAdmin && (
+
+                  {/* Show Correct Answer logic: Admin OR (Candidate AND Results Released) */}
+                  {(isAdmin || submission.resultsReleased) && (
                     <div className="p-6 bg-green-50 dark:bg-slate-950 rounded-xl border-l-[6px] border-green-500">
                       <span className="block text-[10px] font-black uppercase tracking-widest text-green-600 mb-2">{q.type === QuestionType.THEORY ? 'Model Answer / Rubric' : 'Correct Answer'}</span>
                       <p className="font-medium text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{q.correctAnswer}</p>
                     </div>
                   )}
                 </div>
+
+                {/* Enhanced MCQ/SBA Options Display for Context */}
+                {(q.type === QuestionType.MCQ || q.type === QuestionType.SBA) && q.options && (
+                  <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Question Options</span>
+                    <div className="space-y-2">
+                      {q.options.map((opt, oIdx) => {
+                        const isSelected = userAnswer === opt;
+                        const isCorrect = opt === q.correctAnswer;
+                        const showCorrect = (isAdmin || submission.resultsReleased);
+
+                        let bgClass = "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800";
+                        let textClass = "text-slate-600 dark:text-slate-400";
+                        let icon = null;
+
+                        if (isSelected) {
+                          bgClass = isCorrect
+                            ? "bg-green-100 border-green-300 dark:bg-green-900/30 dark:border-green-800"
+                            : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900";
+                          textClass = isCorrect ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300";
+                          icon = isCorrect ? "✓" : "✗";
+                        } else if (showCorrect && isCorrect) {
+                          bgClass = "bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800";
+                          textClass = "text-green-700 dark:text-green-400";
+                          icon = "✓";
+                        }
+
+                        return (
+                          <div key={oIdx} className={`p-3 rounded border ${bgClass} flex items-center justify-between`}>
+                            <div className={`flex items-center gap-3 ${textClass}`}>
+                              <span className="font-mono text-xs opacity-70">[{String.fromCharCode(65 + oIdx)}]</span>
+                              <span className="font-medium text-sm">{opt}</span>
+                            </div>
+                            {icon && <span className="font-bold">{icon}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

@@ -80,11 +80,9 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
     window.addEventListener('blur', handleBlur);
     enforceSecureEnvironment(true);
 
+    // Initialize Proctoring
     initializeProctoring().then(state => {
       setProctorState(state);
-      if (videoRef.current && state.activeStream) {
-        videoRef.current.srcObject = state.activeStream;
-      }
     });
 
     return () => {
@@ -93,6 +91,13 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
       if (proctorState) stopProctoring(proctorState);
     };
   }, [isAdminPreview]);
+
+  // Fix Camera Stream Attachment (Race Condition)
+  useEffect(() => {
+    if (videoRef.current && proctorState?.activeStream) {
+      videoRef.current.srcObject = proctorState.activeStream;
+    }
+  }, [proctorState, videoRef.current]);
 
   // Polling for Duration Updates (Dynamic Time Extension)
   useEffect(() => {
@@ -216,7 +221,18 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
         <button disabled={currentIndex === 0} onClick={() => setCurrentIndex(prev => prev - 1)} className="px-6 py-3 theme-rounded font-black uppercase text-xs tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Back</button>
         <button disabled={currentIndex === exam.questions.length - 1} onClick={() => setCurrentIndex(prev => prev + 1)} className="px-6 py-3 theme-rounded font-black uppercase text-xs tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Next</button>
       </div>
-      <button onClick={() => { if (confirm("Are you sure you want to finish and submit?")) handleSubmit(); }} className={`px-10 py-3 theme-rounded font-black uppercase tracking-[0.2em] shadow-lg transition-all text-xs ${isStressState ? 'bg-red-600 text-white animate-bounce' : 'bg-slate-900 dark:bg-indigo-600 text-white'}`}>Submit</button>
+      <button
+        disabled={isAdminPreview}
+        onClick={() => { if (confirm("Are you sure you want to finish and submit?")) handleSubmit(); }}
+        className={`px-10 py-3 theme-rounded font-black uppercase tracking-[0.2em] shadow-lg transition-all text-xs ${isAdminPreview
+            ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-50'
+            : isStressState
+              ? 'bg-red-600 text-white animate-bounce'
+              : 'bg-slate-900 dark:bg-indigo-600 text-white'
+          }`}
+      >
+        {isAdminPreview ? 'Preview Mode' : 'Submit'}
+      </button>
     </div>
   );
 
