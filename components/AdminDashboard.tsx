@@ -414,7 +414,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
               <tbody className="text-sm font-medium">
                 {filteredSubmissions.map(sub => {
                   const exam = exams.find(e => e.id === sub.examId);
-                  const student = users.find(u => u.id === sub.studentId);
+                  const student = users.find(u => u.id === sub.userId);
                   const isSelected = selectedSubIds.has(sub.id);
 
                   return (
@@ -423,8 +423,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                         <div className="flex items-center gap-3">
                           <input type="checkbox" checked={isSelected} onChange={() => handleSelectSubmission(sub.id)} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
                           <div>
-                            <div className="font-bold text-slate-900 dark:text-slate-100">{student?.name || 'Unknown'}</div>
-                            <div className="text-xs text-slate-400">{student?.email}</div>
+                            <div className="font-bold text-slate-900 dark:text-slate-100">{sub.user?.name || student?.name || 'Unknown'}</div>
+                            <div className="text-xs text-slate-400">{sub.user?.email || student?.email || sub.userId}</div>
                           </div>
                         </div>
                       </td>
@@ -450,9 +450,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        <button onClick={() => {
-                          if (!exam) { addToast("Exam for this submission was deleted.", "error"); return; }
-                          setSelectedSubmission({ sub, exam: exam });
+                        <button onClick={async () => {
+                          // Force fetch full submission details to ensure we have all questions/answers
+                          // The 'exam' object in the list might be partial.
+                          try {
+                            const fullSub = await api.submissions.get(sub.id);
+                            if (fullSub && fullSub.exam) {
+                              setSelectedSubmission({ sub: fullSub, exam: fullSub.exam });
+                            } else {
+                              // Fallback if API fails to return expected structure (shouldn't happen with correct API)
+                              if (!exam) { addToast("Exam data missing.", "error"); return; }
+                              setSelectedSubmission({ sub, exam });
+                            }
+                          } catch (e) {
+                            console.error("Failed to load submission details", e);
+                            addToast("Failed to load full review details.", "error");
+                            // Fallback to local data if possible, though it might be incomplete
+                            if (exam) setSelectedSubmission({ sub, exam });
+                          }
                         }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase tracking-wide">Review</button>
                       </td>
                     </tr>

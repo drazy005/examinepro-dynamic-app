@@ -213,42 +213,22 @@ const App: React.FC = () => {
   const [viewingSubmission, setViewingSubmission] = useState<{ sub: Submission, exam: Exam } | null>(null);
 
   const handleViewDetails = async (sub: Submission) => {
-    const handleViewDetails = async (sub: Submission) => {
-      try {
-        // Always try to get the full exam first from local cache if it has questions
-        let exam = exams.find(e => e.id === sub.examId);
+    try {
+      setIsLoading(true);
+      // Always fetch the specific submission endpoint to get the full exam snapshot/details securely
+      const fullSubmission = await api.submissions.get(sub.id);
 
-        // If local exam is missing or doesn't have questions loaded (e.g. from a list summary), fetch it.
-        if (!exam || !exam.questions || exam.questions.length === 0) {
-          try {
-            // Determine which API to use based on role. 
-            // Candidates might not have access to 'api.exams.get' if it's restricted to admins?
-            // api.exams.get checks db.exam.findUnique. 
-            // If the exam is published, candidates should be able to get it?
-            // Actually, api/exams/[id].ts usually restricts to Admin unless 'mode=take' or similar?
-            // Let's rely on the submission's embedded exam if possible? 
-            // But submission list only returned a subset?
-
-            // Better approach: Fetch the *Submission Details* endpoint!
-            // The GET /api/submissions/:id endpoint NOW returns the full exam object with questions (sanitized).
-            // So we should just fetch the submission detail.
-
-            const fullSubmission = await api.submissions.get(sub.id);
-            setViewingSubmission({ sub: fullSubmission, exam: fullSubmission.exam });
-            return;
-          } catch (e) {
-            console.error("Failed to fetch full submission details", e);
-            addToast("Could not load review details.", "error");
-            return;
-          }
-        }
-
-        // If we have a full exam locally (e.g. Admin view), use it.
-        setViewingSubmission({ sub, exam });
-      } catch (e) {
-        addToast("Error opening review.", "error");
+      if (!fullSubmission || !fullSubmission.exam) {
+        throw new Error("Invalid submission data");
       }
-    };
+
+      setViewingSubmission({ sub: fullSubmission, exam: fullSubmission.exam });
+    } catch (e) {
+      console.error("View Details Error:", e);
+      addToast("Failed to load review details. Please try again.", "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderContent = () => {

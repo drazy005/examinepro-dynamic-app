@@ -233,7 +233,7 @@ export interface Submission {
   id: string;
   examId: string;
   examVersion: number;
-  studentId: string;
+  userId: string; // Changed from studentId to match DB
   answers: Record<string, string>;
   questionResults: Record<string, QuestionResult>;
   score: number;
@@ -248,6 +248,10 @@ export interface Submission {
   timeSpentMs?: number;
   isLate?: boolean;
   source?: string;
+
+  // Hydrated fields from API
+  user?: { name: string; email: string; id?: string };
+  exam?: Partial<Exam>;
 }
 
 export interface AuditLog {
