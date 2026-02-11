@@ -397,6 +397,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 <button onClick={() => { handleBulkDeleteSubmissions(Array.from(selectedSubIds)); setSelectedSubIds(new Set()); }} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg">Delete ({selectedSubIds.size})</button>
               )}
               <button onClick={handleReleaseAllDelayedResults} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase">Release Delayed</button>
+              <button
+                onClick={async () => {
+                  if (confirm("Re-grade ALL submissions? This will overwrite manual scores unless preserved.")) {
+                    try {
+                      const res = await api.submissions.regradeAll();
+                      addToast(`Re-graded ${res.count} submissions.`, 'success');
+                      fetchSubmissions(1);
+                    } catch (e) { addToast("Failed to re-grade", "error"); }
+                  }
+                }}
+                className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg hover:bg-indigo-500"
+              >
+                Re-Grade All
+              </button>
             </div>
           </div>
           <div className="bg-slate-50 dark:bg-slate-900 theme-rounded p-8 shadow-sm overflow-x-auto">
@@ -430,9 +444,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                       </td>
                       <td className="p-4 text-slate-600 dark:text-slate-300">{exam?.title || 'Deleted Exam'}</td>
                       <td className="p-4 text-slate-500">{new Date(sub.submittedAt).toLocaleDateString()}</td>
-                      <td className="p-4 text-center font-bold text-lg">
+                      <td className="p-4 text-center">
                         {sub.graded ? (
-                          <span>{(sub.score / (exam?.totalPoints || 1) * 100).toFixed(0)}%</span>
+                          <div className="flex flex-col items-center">
+                            <span className="font-black text-slate-900 dark:text-white text-lg">{sub.score} <span className="text-xs text-slate-400 font-normal">/ {exam?.totalPoints || '?'}</span></span>
+                            <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500 font-bold">{(sub.score / (exam?.totalPoints || 1) * 100).toFixed(0)}%</span>
+                          </div>
                         ) : (
                           <span className="text-slate-400">-</span>
                         )}
@@ -444,7 +461,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                             setSelectedSubmission({ sub, exam });
                           }} className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-[10px] uppercase font-black hover:bg-yellow-200 cursor-pointer underline decoration-dotted">Needs Grading</button>
                         ) : sub.graded ? (
-                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] uppercase font-black">Review Done</span>
+                          <button onClick={() => {
+                            if (!exam) return;
+                            setSelectedSubmission({ sub, exam });
+                          }} className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] uppercase font-black hover:bg-green-200">Review Done</button>
                         ) : (
                           <span className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-[10px] uppercase font-black">Pending</span>
                         )}

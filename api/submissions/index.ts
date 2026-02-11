@@ -298,7 +298,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             try {
                 await db.submission.update({
-                    where: { id },
+                    where: { id: Array.isArray(id) ? id[0] : id },
                     data: { resultsReleased: release }
                 });
                 return res.status(200).json({ success: true, released: release });
@@ -335,6 +335,71 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ success: true, count: dueExamIds.length });
             } catch (e) {
                 return res.status(500).json({ error: 'Failed' });
+            }
+        }
+
+        // Action: Re-grade All (Retroactive Fix)
+        if (action === 'regrade-all') {
+            if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+            try {
+                // Fetch all submissions with their exams and questions
+                const submissions = await db.submission.findMany({
+                    include: { exam: { include: { questions: true } } }
+                });
+
+                let updateCount = 0;
+
+                for (const sub of submissions) {
+                    if (!sub.exam) continue; // Orphaned submission?
+
+                    let newScore = 0;
+                    const newQuestionResults: Record<string, any> = {};
+                    let requiresManual = false;
+
+                    // Re-run grading logic
+                    for (const q of sub.exam.questions) {
+                        const userAnswer = (sub.answers as any)[q.id];
+                        const result: any = { score: 0, isCorrect: false };
+
+                        if (q.type === 'MCQ' || q.type === 'SBA') {
+                            if (userAnswer === q.correctAnswer) {
+                                result.score = q.points;
+                                result.isCorrect = true;
+                                newScore += q.points;
+                            }
+                        } else if (q.type === 'THEORY') {
+                            // Preserve existing manual score if available, otherwise 0
+                            const existingResult = (sub.questionResults as any)?.[q.id];
+                            if (existingResult && existingResult.score !== undefined) {
+                                result.score = existingResult.score;
+                                newScore += result.score;
+                            } else {
+                                requiresManual = true;
+                            }
+                        }
+                        newQuestionResults[q.id] = result;
+                    }
+
+                    // Update if score changed or results need refreshing
+                    if (sub.score !== newScore || !sub.questionResults) {
+                        await db.submission.update({
+                            where: { id: sub.id },
+                            data: {
+                                score: newScore,
+                                questionResults: newQuestionResults,
+                                // Only change status if it was graded but now needs manual (unlikely reversa)
+                                // or if we want to force 'GRADED' if legacy was stuck
+                                status: requiresManual ? 'GRADING_IN_PROGRESS' : 'GRADED',
+                                graded: !requiresManual
+                            }
+                        });
+                        updateCount++;
+                    }
+                }
+
+                return res.status(200).json({ success: true, count: updateCount });
+            } catch (e) {
+                return res.status(500).json({ error: 'Failed to regrade' });
             }
         }
     }
