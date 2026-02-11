@@ -223,12 +223,23 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
       </div>
       <button
         disabled={isAdminPreview}
-        onClick={() => { if (confirm("Are you sure you want to finish and submit?")) handleSubmit(); }}
+        onClick={() => {
+          // Partial Submission Check
+          const answeredCount = Object.keys(answers).length;
+          const total = exam.questions.length;
+          if (answeredCount < total) {
+            if (confirm(`Warning: You have ${total - answeredCount} unanswered questions.\n\nAre you sure you want to submit?`)) {
+              handleSubmit();
+            }
+          } else {
+            if (confirm("Confirm Final Submission?")) handleSubmit();
+          }
+        }}
         className={`px-10 py-3 theme-rounded font-black uppercase tracking-[0.2em] shadow-lg transition-all text-xs ${isAdminPreview
-            ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-50'
-            : isStressState
-              ? 'bg-red-600 text-white animate-bounce'
-              : 'bg-slate-900 dark:bg-indigo-600 text-white'
+          ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-50'
+          : isStressState
+            ? 'bg-red-600 text-white animate-bounce'
+            : 'bg-slate-900 dark:bg-indigo-600 text-white'
           }`}
       >
         {isAdminPreview ? 'Preview Mode' : 'Submit'}
@@ -396,12 +407,39 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
               </div>
             </div>
 
-            {/* Bottom Navigation */}
-            <div className="px-8 py-6 border-t bg-slate-50 dark:bg-slate-950/50">
+            {/* Bottom Navigation - Sticky on Mobile */}
+            <div className="px-8 py-6 border-t bg-slate-50 dark:bg-slate-950/50 hidden md:block">
               <NavigationControls />
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Sticky Footer */}
+      <div className="md:hidden fixed bottom-6 left-4 right-4 z-[60] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 theme-rounded shadow-2xl flex justify-between items-center gap-4 animate-in slide-in-from-bottom-4">
+        <button disabled={currentIndex === 0} onClick={() => setCurrentIndex(prev => prev - 1)} className="p-3 theme-rounded bg-slate-100 dark:bg-slate-800 text-slate-500 disabled:opacity-30">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+        </button>
+
+        <button
+          disabled={isAdminPreview}
+          onClick={() => {
+            const answered = Object.keys(answers).length;
+            const total = exam.questions.length;
+            if (answered < total) {
+              if (confirm(`${total - answered} unanswered questions. Submit?`)) handleSubmit();
+            } else {
+              if (confirm("Submit Exam?")) handleSubmit();
+            }
+          }}
+          className={`flex-1 py-3 theme-rounded font-black uppercase text-sm shadow-lg ${isStressState ? 'bg-red-600 animate-pulse text-white' : 'bg-slate-900 dark:bg-indigo-600 text-white'}`}
+        >
+          {isAdminPreview ? 'Preview' : 'Submit'}
+        </button>
+
+        <button disabled={currentIndex === exam.questions.length - 1} onClick={() => setCurrentIndex(prev => prev + 1)} className="p-3 theme-rounded bg-slate-100 dark:bg-slate-800 text-slate-500 disabled:opacity-30">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+        </button>
       </div>
     </div >
   );

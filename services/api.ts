@@ -88,6 +88,7 @@ export const api = {
     saveDraft: (submissionId: string, answers: any) => request<void>('/submissions?action=draft', { method: 'POST', body: JSON.stringify({ submissionId, answers }) }),
     grade: (submissionId: string, questionId: string, result: any) => request<void>(`/submissions?id=${submissionId}&action=grade`, { method: 'POST', body: JSON.stringify({ questionId, result }) }),
     release: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=release`, { method: 'POST' }),
+    toggleRelease: (submissionId: string, release: boolean) => request<void>(`/submissions?id=${submissionId}&action=toggle-release`, { method: 'POST', body: JSON.stringify({ release }) }),
     releaseAll: () => request<void>('/submissions?action=release-all', { method: 'POST' }),
     aiGrade: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=ai-grade`, { method: 'POST' }),
     bulkDelete: (ids: string[]) => request<void>(`/submissions?ids=${ids.join(',')}`, { method: 'DELETE' }),

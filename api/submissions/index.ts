@@ -289,14 +289,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Release All
+        // Action: Release Results (Toggle)
+        if (action === 'toggle-release') {
+            if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+            // Expecting body: { release: boolean }
+            const { release } = req.body;
+            if (typeof release !== 'boolean') return res.status(400).json({ error: 'Exepcted boolean release state' });
+
+            try {
+                await db.submission.update({
+                    where: { id },
+                    data: { resultsReleased: release }
+                });
+                return res.status(200).json({ success: true, released: release });
+            } catch (e) { return res.status(500).json({ error: 'Failed' }); }
+        }
+
+        // Action: Release All Delayed (Smart Release)
+        // Releases all submissions where Exam is SCHEDULED and Date is Past
         if (action === 'release-all') {
             if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
             try {
-                await db.submission.updateMany({
-                    where: { resultsReleased: false },
-                    data: { resultsReleased: true }
+                // 1. Find all SCHEDULED exams that are due
+                const dueExams = await db.exam.findMany({
+                    where: {
+                        resultReleaseMode: 'SCHEDULED',
+                        scheduledReleaseDate: { lte: new Date() }
+                    },
+                    select: { id: true }
                 });
-                return res.status(200).json({ success: true });
+
+                const dueExamIds = dueExams.map(e => e.id);
+
+                if (dueExamIds.length > 0) {
+                    // 2. Release all unreleased submissions for these exams
+                    await db.submission.updateMany({
+                        where: {
+                            examId: { in: dueExamIds },
+                            resultsReleased: false
+                        },
+                        data: { resultsReleased: true }
+                    });
+                }
+
+                return res.status(200).json({ success: true, count: dueExamIds.length });
             } catch (e) {
                 return res.status(500).json({ error: 'Failed' });
             }
