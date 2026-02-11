@@ -66,6 +66,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(501).json({ error: 'AI Grading not implemented' });
             }
 
+            if (action === 'toggle-release') {
+                if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+                const { release } = req.body;
+                if (typeof release !== 'boolean') return res.status(400).json({ error: 'Exepcted boolean release state' });
+
+                await db.submission.update({
+                    where: { id },
+                    data: { resultsReleased: release }
+                });
+                return res.status(200).json({ success: true, released: release });
+            }
+
             // Fallthrough for generic update? No, that's PUT.
             return res.status(400).json({ error: 'Invalid action' });
         }

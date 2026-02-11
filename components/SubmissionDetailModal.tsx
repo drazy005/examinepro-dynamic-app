@@ -55,19 +55,60 @@ const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
     }
   };
 
-  // ... Certificate View remains the same ...
+  if (isCertificateView) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in">
+        <div className="bg-white text-slate-900 p-16 max-w-4xl w-full theme-rounded shadow-2xl relative border-[20px] border-double border-indigo-100 text-center animate-in zoom-in-95">
+          <button onClick={() => setIsCertificateView(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+
+          <div className="mb-12">
+            <div className="w-24 h-24 bg-indigo-600 rounded-full mx-auto flex items-center justify-center mb-6 shadow-xl">
+              <span className="text-4xl text-white">🎓</span>
+            </div>
+            <h2 className="text-5xl font-black font-serif uppercase tracking-widest text-indigo-900 mb-4">Certificate</h2>
+            <p className="text-xl text-slate-500 font-serif italic">of Achievement</p>
+          </div>
+
+          <div className="space-y-6 mb-12">
+            <p className="text-lg text-slate-600">This certifies that</p>
+            <h3 className="text-4xl font-bold text-slate-900 border-b-2 border-slate-200 pb-4 inline-block px-12 capitalize">{submission.user?.name || 'The Candidate'}</h3>
+            <p className="text-lg text-slate-600">has successfully completed the exam</p>
+            <h4 className="text-3xl font-bold text-indigo-700">{exam.title}</h4>
+            <p className="text-lg text-slate-600 mt-4">with a score of <span className="font-black text-slate-900">{percentage}%</span></p>
+          </div>
+
+          <div className="flex justify-between items-end text-left pt-12 border-t border-slate-100">
+            <div>
+              <p className="text-xs font-bold uppercase text-slate-400 mb-1">Date Completed</p>
+              <p className="font-serif text-lg text-slate-900">{new Date(submission.submittedAt).toLocaleDateString()}</p>
+            </div>
+            <div className="text-right">
+              <div className="h-12 w-32 border-b border-indigo-900 mb-2"></div>
+              <p className="text-xs font-bold uppercase text-indigo-900">Valid Signature</p>
+            </div>
+          </div>
+
+          <div className="mt-8 no-print">
+            <button onClick={() => window.print()} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs shadow-lg hover:bg-indigo-700">Print Certificate</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl max-h-[90vh] theme-rounded shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 border-b-[12px] border-indigo-600">
-        <div className="p-12 bg-indigo-700 dark:bg-indigo-900 text-white flex justify-between items-center shrink-0">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col border-b-[8px] border-indigo-600 animate-in fade-in zoom-in-95 duration-200">
+        <div className="p-8 bg-indigo-700 dark:bg-indigo-900 text-white flex justify-between items-center shrink-0">
           <div>
-            <h3 className="text-4xl font-black tracking-tighter uppercase">{exam.title}</h3>
-            <p className="text-indigo-200 text-[10px] font-black uppercase tracking-widest mt-2">Ref: {submission.id.slice(0, 8)}</p>
+            <h3 className="text-3xl font-black tracking-tighter uppercase">{exam.title}</h3>
+            <p className="text-indigo-200 text-[10px] font-black uppercase tracking-widest mt-1">Ref: {submission.id.slice(0, 8)}</p>
           </div>
           <div className="text-right flex flex-col items-end">
-            <p className="text-6xl font-black tracking-tighter leading-none">{submission.score.toFixed(1)} <span className="text-xl font-normal opacity-40">/ {exam.totalPoints}</span></p>
-            <p className="text-right text-indigo-300 font-bold text-lg mt-1">{Math.round((submission.score / (exam.totalPoints || 1)) * 100)}%</p>
+            <p className="text-5xl font-black tracking-tighter leading-none">{submission.score.toFixed(1)} <span className="text-lg font-normal opacity-60">/ {exam.totalPoints}</span></p>
+            <p className="text-right text-indigo-200 font-bold text-sm mt-1">{Math.round((submission.score / (exam.totalPoints || 1)) * 100)}%</p>
             {isAdmin && (
               <button
                 onClick={async () => {
