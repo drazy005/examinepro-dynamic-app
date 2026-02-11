@@ -66,6 +66,11 @@ const ExamInterface: React.FC<ExamInterfaceProps> = ({
   };
 
   const [timeLeft, setTimeLeft] = useState(calculateInitialTime());
+
+  // Sync timeLeft if exam duration changes or initialStartTime updates
+  useEffect(() => {
+    if (isNaN(timeLeft)) setTimeLeft(calculateInitialTime());
+  }, [timeLeft]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasAutoSubmitted = useRef(false);
 

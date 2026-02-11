@@ -100,7 +100,7 @@ const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col border-b-[8px] border-indigo-600 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col border-b-[8px] border-indigo-600 animate-in fade-in duration-200">
         <div className="p-8 bg-indigo-700 dark:bg-indigo-900 text-white flex justify-between items-center shrink-0">
           <div>
             <h3 className="text-3xl font-black tracking-tighter uppercase">{exam.title}</h3>
