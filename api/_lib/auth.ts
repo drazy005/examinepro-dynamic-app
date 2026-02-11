@@ -69,3 +69,70 @@ export const authLib = {
         });
     }
 };
+
+export const signToken = authLib.signToken;
+
+// === Google OAuth Helpers ===
+
+export interface GoogleUser {
+    id: string;
+    email: string;
+    verified_email: boolean;
+    name: string;
+    given_name: string;
+    family_name: string;
+    picture: string;
+    locale: string;
+}
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${process.env.APP_URL || 'http://localhost:3000'}/api/auth/google`;
+
+export const getGoogleAuthUrl = () => {
+    const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+    const options = {
+        redirect_uri: GOOGLE_REDIRECT_URI,
+        client_id: GOOGLE_CLIENT_ID || '',
+        access_type: 'offline',
+        response_type: 'code',
+        prompt: 'consent',
+        scope: [
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/userinfo.email',
+        ].join(' '),
+    };
+
+    const qs = new URLSearchParams(options).toString();
+    return `${rootUrl}?${qs}`;
+};
+
+export const getGoogleUser = async (code: string): Promise<GoogleUser> => {
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const values = {
+        code,
+        client_id: GOOGLE_CLIENT_ID || '',
+        client_secret: GOOGLE_CLIENT_SECRET || '',
+        redirect_uri: GOOGLE_REDIRECT_URI,
+        grant_type: 'authorization_code',
+    };
+
+    const tokenRes = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(values).toString(),
+    });
+
+    if (!tokenRes.ok) throw new Error(`Google Token Error: ${tokenRes.statusText}`);
+
+    const { access_token, id_token } = await tokenRes.json();
+
+    // Fetch User Info
+    const userRes = await fetch(`https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${access_token}`, {
+        headers: { Authorization: `Bearer ${id_token}` },
+    });
+
+    if (!userRes.ok) throw new Error(`Google User Error: ${userRes.statusText}`);
+
+    return userRes.json();
+};

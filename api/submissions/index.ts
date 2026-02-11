@@ -347,6 +347,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     include: { exam: { include: { questions: true } } }
                 });
 
+                console.log(`[Regrade] Found ${submissions.length} submissions.`);
+
                 let updateCount = 0;
 
                 for (const sub of submissions) {
@@ -362,7 +364,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         const result: any = { score: 0, isCorrect: false };
 
                         if (q.type === 'MCQ' || q.type === 'SBA') {
-                            if (userAnswer === q.correctAnswer) {
+                            // Loose comparison (trim and stringify)
+                            if (String(userAnswer || '').trim() === String(q.correctAnswer || '').trim()) {
                                 result.score = q.points;
                                 result.isCorrect = true;
                                 newScore += q.points;
@@ -380,17 +383,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         newQuestionResults[q.id] = result;
                     }
 
-                    // Update if score changed or results need refreshing
-                    if (sub.score !== newScore || !sub.questionResults) {
+                    // Strict Update Logic
+                    const newStatus = requiresManual ? 'PENDING_MANUAL_REVIEW' : 'GRADED';
+                    const newGraded = !requiresManual;
+
+                    if (
+                        sub.score !== newScore ||
+                        !sub.questionResults ||
+                        sub.status !== newStatus ||
+                        sub.graded !== newGraded
+                    ) {
+                        console.log(`[Regrade] Updating ${sub.id}: Score ${sub.score} -> ${newScore}`);
                         await db.submission.update({
                             where: { id: sub.id },
                             data: {
                                 score: newScore,
                                 questionResults: newQuestionResults,
-                                // Only change status if it was graded but now needs manual (unlikely reversa)
-                                // or if we want to force 'GRADED' if legacy was stuck
-                                status: requiresManual ? 'GRADING_IN_PROGRESS' : 'GRADED',
-                                graded: !requiresManual
+                                status: newStatus,
+                                graded: newGraded
                             }
                         });
                         updateCount++;
