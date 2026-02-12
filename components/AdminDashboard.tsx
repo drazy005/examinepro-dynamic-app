@@ -272,15 +272,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
     }
   };
 
-  const handleAIGradeSubmission = async (id: string) => {
-    try {
-      await api.submissions.aiGrade(id);
-      addToast('AI grading initiated.', 'success');
-      fetchSubmissions(submissionsData.page); // Refresh current page
-    } catch (e) {
-      addToast('Failed to initiate AI grading.', 'error');
-    }
-  };
+
 
   const filteredSubmissions = useMemo(() => {
     const term = submissionFilter.toLowerCase();
@@ -484,25 +476,38 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        <button onClick={async () => {
-                          // Force fetch full submission details to ensure we have all questions/answers
-                          // The 'exam' object in the list might be partial.
-                          try {
-                            const fullSub = await api.submissions.get(sub.id);
-                            if (fullSub && fullSub.exam) {
-                              setSelectedSubmission({ sub: fullSub, exam: fullSub.exam });
-                            } else {
-                              // Fallback if API fails to return expected structure (shouldn't happen with correct API)
-                              if (!exam) { addToast("Exam data missing.", "error"); return; }
-                              setSelectedSubmission({ sub, exam });
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={async () => {
+                            try {
+                              const res = await api.submissions.regrade(sub.id);
+                              if (res.success && res.result) {
+                                addToast(`Score updated: ${res.result.score}`, 'success');
+                                fetchSubmissions(submissionsData.page);
+                              }
+                            } catch (e) { addToast("Regrade failed", "error"); }
+                          }} className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-bold text-[10px] uppercase tracking-wide" title="Recalculate Score">
+                            Recalc
+                          </button>
+                          <button onClick={async () => {
+                            // Force fetch full submission details to ensure we have all questions/answers
+                            // The 'exam' object in the list might be partial.
+                            try {
+                              const fullSub = await api.submissions.get(sub.id);
+                              if (fullSub && fullSub.exam) {
+                                setSelectedSubmission({ sub: fullSub, exam: fullSub.exam });
+                              } else {
+                                // Fallback if API fails to return expected structure (shouldn't happen with correct API)
+                                if (!exam) { addToast("Exam data missing.", "error"); return; }
+                                setSelectedSubmission({ sub, exam });
+                              }
+                            } catch (e) {
+                              console.error("Failed to load submission details", e);
+                              addToast("Failed to load full review details.", "error");
+                              // Fallback to local data if possible, though it might be incomplete
+                              if (exam) setSelectedSubmission({ sub, exam });
                             }
-                          } catch (e) {
-                            console.error("Failed to load submission details", e);
-                            addToast("Failed to load full review details.", "error");
-                            // Fallback to local data if possible, though it might be incomplete
-                            if (exam) setSelectedSubmission({ sub, exam });
-                          }
-                        }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase tracking-wide">Review</button>
+                          }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase tracking-wide">Review</button>
+                        </div>
                       </td>
                     </tr>
                   );

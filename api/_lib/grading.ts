@@ -25,9 +25,9 @@ export function calculateGrade(exam: Exam & { questions: Question[] }, answers: 
         maxScore += q.points;
 
         if (q.type === 'MCQ' || q.type === 'SBA') {
-            // Loose comparison: trim whitespace and ensure string comparison
-            const normalizedUser = String(userAnswer || '').trim();
-            const normalizedCorrect = String(q.correctAnswer || '').trim();
+            // Loose comparison: trim whitespace and ensure string comparison, CASE INSENSITIVE
+            const normalizedUser = String(userAnswer || '').trim().toLowerCase();
+            const normalizedCorrect = String(q.correctAnswer || '').trim().toLowerCase();
 
             if (normalizedUser === normalizedCorrect && normalizedUser !== '') {
                 result.score = q.points;
@@ -55,7 +55,7 @@ export function calculateGrade(exam: Exam & { questions: Question[] }, answers: 
         questionResults,
         status: requiresManualGrading ? 'PENDING_MANUAL_REVIEW' : 'GRADED',
         graded: !requiresManualGrading,
-        totalPoints: totalScore,
+        totalPoints: maxScore, // Return the maximum possible points for the exam
         maxScore
     };
 }

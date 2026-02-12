@@ -91,14 +91,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
                     showMcqScoreImmediately, passMark, totalPoints, published,
                     version, resultRelease, reviewed, timerSettings, gradingPolicy,
-                    questions, collaborators, createdAt
+                    questions, collaborators, createdAt, resourceLink
                 } = req.body;
 
                 const updateData: any = {
                     title, description, category, difficulty, durationMinutes,
                     warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
                     showMcqScoreImmediately, passMark, totalPoints, published,
-                    version, resultRelease, reviewed, timerSettings, gradingPolicy
+                    version, resultRelease, reviewed, timerSettings, gradingPolicy,
+                    resourceLink
                 };
 
                 if (createdAt) {
@@ -191,7 +192,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 timerSettings, gradingPolicy, questions, published,
                 collaborators, passMark, totalPoints,
                 warningTimeThreshold, resultReleaseMode, scheduledReleaseDate,
-                showMcqScoreImmediately, resultRelease, createdAt
+                showMcqScoreImmediately, resultRelease, resourceLink, createdAt
             } = req.body;
 
             const questionConnect = questions && Array.isArray(questions)
@@ -212,6 +213,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 gradingPolicy: gradingPolicy || {},
                 published: published !== undefined ? published : false,
                 resultRelease: resultRelease || 'INSTANT',
+                resourceLink: resourceLink || null,
 
                 passMark: passMark !== undefined ? Number(passMark) : 50,
                 totalPoints: totalPoints !== undefined ? Number(totalPoints) : 0,

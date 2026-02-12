@@ -23,7 +23,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const role = user.role as string;
     const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(role);
 
-    const { action, id } = req.query;
+    let { action, id } = req.query;
+    const { route } = req.query;
+
+    // Handle Vercel Dynamic Route: /api/submissions/123
+    if (!id && Array.isArray(route) && route.length > 0) {
+        id = route[0];
+    }
 
     // === SINGLE ID OPERATIONS (Logic merged from [id].ts) ===
     if (id && typeof id === 'string') {
@@ -77,9 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 } catch (e) { return res.status(500).json({ error: 'Failed' }); }
             }
 
-            if (action === 'ai-grade') {
-                return res.status(501).json({ error: 'AI Grading not implemented' });
-            }
+
 
             if (action === 'toggle-release') {
                 if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
