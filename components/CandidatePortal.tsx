@@ -109,7 +109,7 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
                                 <h3 className="text-xl font-bold mb-2">{exam.title}</h3>
                                 <p className="text-sm text-slate-500 mb-4 line-clamp-2">{exam.description || "No description provided."}</p>
                                 <div className="mt-4 space-y-3">
-                                    {exam.resourceLink && (
+                                    {exam.resourceLink && (exam.resourceLink.startsWith('http') || exam.resourceLink.startsWith('https')) && (
                                         <a
                                             href={exam.resourceLink}
                                             target="_blank"

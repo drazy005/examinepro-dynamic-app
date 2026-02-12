@@ -689,7 +689,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
                   <div>
                     <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Resource Link (Source Material)</label>
-                    <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm" value={editingExam.resourceLink || ''} onChange={e => setEditingExam({ ...editingExam, resourceLink: e.target.value })} placeholder="e.g. Google Drive URL or PDF Link (Inaccessible during exam)" />
+                    <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm" value={editingExam.resourceLink || ''} onChange={e => setEditingExam({ ...editingExam, resourceLink: e.target.value })} placeholder="e.g. https://drive.google.com/..." />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -891,7 +891,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                               e.stopPropagation(); onPreviewExam(exam);
                             }} className="text-blue-600 text-xs font-bold uppercase hover:underline z-10">Preview</button>
 
-                            {exam.resourceLink && (
+                            {exam.resourceLink && (exam.resourceLink.startsWith('http') || exam.resourceLink.startsWith('https')) && (
                               <a
                                 href={exam.resourceLink}
                                 target="_blank"

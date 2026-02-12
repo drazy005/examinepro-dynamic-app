@@ -147,11 +147,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(404).json({ error: 'Exam not found' });
                 }
 
-                const isAuthor = exam.authorId === user.userId;
-                const isSuperAdmin = user.role === 'SUPERADMIN';
-
-                if (!isAdmin || (!isAuthor && !isSuperAdmin)) {
-                    console.warn(`[API] Access denied for delete. isAuthor: ${isAuthor}, isSuper: ${isSuperAdmin}`);
+                // Allow any Admin to delete exams (User Request implied)
+                if (!isAdmin) {
+                    console.warn(`[API] Access denied for delete. Role: ${user.role}`);
                     return res.status(403).json({ error: 'Access denied' });
                 }
 

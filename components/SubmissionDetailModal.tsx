@@ -201,7 +201,7 @@ const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         {/* Toolbar */}
         <div className="bg-slate-100 dark:bg-slate-900 p-2 md:px-8 border-b border-slate-200 dark:border-slate-800 flex flex-wrap gap-2 items-center justify-between shrink-0">
           <div className="flex gap-2">
-            {exam.resourceLink && (
+            {exam.resourceLink && (exam.resourceLink.startsWith('http') || exam.resourceLink.startsWith('https')) && (
               <a
                 href={exam.resourceLink}
                 target="_blank"
