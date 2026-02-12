@@ -82,13 +82,18 @@ const App: React.FC = () => {
   }, [handleLogout]);
 
   useEffect(() => {
-    const role = user?.role?.toUpperCase();
-    if (role === 'ADMIN' || role === 'SUPERADMIN' || role === 'CANDIDATE') {
-      refreshQuestions(true); // Silent
-      refreshExams(true);     // Silent
-      // Note: Candidates only need exams, but refreshing questions doesn't hurt (or we can skip).
-      // actually, candidate portal fetches its own available exams.
-      // But StudentDashboard (if used) needs this.
+    if (!user) return;
+    const role = user.role ? user.role.toUpperCase() : '';
+    console.log(`[App] Checking data load for role: ${user.role} (Normalized: ${role})`);
+
+    // Accept standard roles including mixed case
+    if (['ADMIN', 'SUPERADMIN', 'CANDIDATE'].includes(role)) {
+      console.log('[App] Refreshing questions and exams...');
+      // Pass FALSE to silent param to ensure errors are TOASTED to the user
+      refreshQuestions(false).catch(e => console.error("[App] Questions refresh failed:", e));
+      refreshExams(false).catch(e => console.error("[App] Exams refresh failed:", e));
+    } else {
+      console.warn(`[App] Role ${role} not recognized for auto-refresh.`);
     }
   }, [user, refreshQuestions, refreshExams]);
 
