@@ -285,6 +285,17 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
               </div>
 
               <div className="p-6 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                <label className="block text-xs font-black uppercase tracking-widest text-indigo-600 mb-2">Marquee Message (Top Banner)</label>
+                <input
+                  className="w-full p-3 font-bold bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none transition-colors"
+                  placeholder="e.g. System Maintenance Scheduled for Saturday..."
+                  value={branding.marqueeMessage || ''}
+                  onChange={e => setBranding({ ...branding, marqueeMessage: e.target.value })}
+                />
+                <p className="text-[10px] text-slate-400 mt-2 font-bold">Leave empty to hide.</p>
+              </div>
+
+              <div className="p-6 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
                 <label className="block text-xs font-black uppercase tracking-widest text-indigo-600 mb-2">Footer Customization</label>
                 <p className="text-[10px] text-slate-400 mb-4 font-bold">
                   Super Admin Only. Use <span className="font-mono text-indigo-500 bg-white dark:bg-slate-900 px-1 rounded">{'{year}'}</span> as a placeholder for the current year.
@@ -481,7 +492,19 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = memo(({ announce
                     <h3 className="font-bold">{post.title}</h3>
                     <p className="text-sm text-slate-600 mt-1">{post.content}</p>
                     <div className="text-xs text-slate-400 mt-2">By {post.authorName} on {new Date(post.createdAt).toLocaleDateString()}</div>
-                    <button onClick={() => setEditingPost(post)} className="absolute top-4 right-4 text-indigo-600 text-xs font-bold uppercase opacity-0 group-hover:opacity-100">Edit</button>
+                    <button onClick={() => setEditingPost(post)} className="absolute top-4 right-14 text-indigo-600 text-xs font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+                    <button onClick={async () => {
+                      if (confirm('Delete this announcement?')) {
+                        try {
+                          await api.admin.announcements.delete(post.id);
+                          const newPosts = announcements.filter(p => p.id !== post.id);
+                          onUpdateAnnouncements(newPosts);
+                          addToast('Announcement deleted', 'success');
+                        } catch (e) {
+                          addToast('Failed to delete', 'error');
+                        }
+                      }
+                    }} className="absolute top-4 right-4 text-red-500 text-xs font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">Delete</button>
                   </div>
                 ))}
               </div>

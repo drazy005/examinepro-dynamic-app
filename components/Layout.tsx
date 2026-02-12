@@ -80,6 +80,25 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, isDarkMode, o
         className="text-white shadow-lg sticky top-0 z-50 transition-colors"
         style={{ backgroundColor: isDarkMode ? undefined : 'var(--primary-color)' }}
       >
+        <style>{`
+          @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+          }
+          .animate-marquee {
+            animation: marquee 25s linear infinite;
+          }
+          .animate-marquee:hover {
+            animation-play-state: paused;
+          }
+        `}</style>
+        {branding.marqueeMessage && (
+          <div className="bg-indigo-600/90 text-white overflow-hidden py-2 relative z-[60]">
+            <div className="whitespace-nowrap animate-marquee font-bold uppercase text-xs tracking-widest px-4">
+              {branding.marqueeMessage}
+            </div>
+          </div>
+        )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center gap-8">

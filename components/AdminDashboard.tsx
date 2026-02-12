@@ -891,6 +891,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                               e.stopPropagation(); onPreviewExam(exam);
                             }} className="text-blue-600 text-xs font-bold uppercase hover:underline z-10">Preview</button>
 
+                            {exam.resourceLink && (
+                              <a
+                                href={exam.resourceLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-purple-600 text-xs font-bold uppercase hover:underline z-10"
+                              >
+                                Resource
+                              </a>
+                            )}
+
                             {/* Quick Duration Edit for Active Exams */}
                             <button onClick={async (e) => {
                               e.stopPropagation();

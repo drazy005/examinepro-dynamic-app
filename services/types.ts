@@ -135,6 +135,7 @@ export interface AppBranding {
   fontFamily: 'sans' | 'mono' | 'serif';
   footerText?: string;
   faviconUrl?: string; // Separate from logo if needed
+  marqueeMessage?: string; // Top scrolling message
 }
 
 export interface BlogPost {

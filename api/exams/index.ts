@@ -155,8 +155,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(403).json({ error: 'Access denied' });
                 }
 
-                // Delete related submissions first? Prisma cascade handles this usually, but let's be safe
-                // or just rely on cascade.
+                // Explicitly delete related submissions to avoid Foreign Key constraint failures
+                // (In case the DB schema 'onDelete: Cascade' is not correctly applied)
+                const deletedSubs = await db.submission.deleteMany({ where: { examId: pathId } });
+                console.log(`[API] Deleted ${deletedSubs.count} submissions for exam ${pathId}`);
+
                 await db.exam.delete({ where: { id: pathId } });
                 console.log(`[API] Exam ${pathId} deleted successfully.`);
                 return res.status(200).json({ success: true });

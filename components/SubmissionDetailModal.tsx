@@ -208,7 +208,7 @@ const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg text-xs font-bold uppercase hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
               >
-                <span>📎</span> View Source Material
+                <span>📎</span> Resource
               </a>
             )}
             {isAdmin && onReGrade && (

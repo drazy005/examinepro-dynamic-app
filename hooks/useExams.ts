@@ -46,8 +46,10 @@ export const useExams = () => {
     try {
       await api.exams.delete(id);
       addToast('Exam deleted.', 'success');
-    } catch (err) {
-      addToast('Failed to delete exam.', 'error');
+    } catch (err: any) {
+      console.error("[UseExams] Delete Error Details:", err);
+      // Try to read API response if available in error
+      addToast(`Failed to delete exam: ${err.message || 'Unknown error'}`, 'error');
       setExams(originalExams); // Revert on error
     }
   }, [exams, addToast]);

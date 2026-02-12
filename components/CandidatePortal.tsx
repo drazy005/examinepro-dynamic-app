@@ -108,7 +108,17 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
                                 </div>
                                 <h3 className="text-xl font-bold mb-2">{exam.title}</h3>
                                 <p className="text-sm text-slate-500 mb-4 line-clamp-2">{exam.description || "No description provided."}</p>
-                                <div className="mt-4">
+                                <div className="mt-4 space-y-3">
+                                    {exam.resourceLink && (
+                                        <a
+                                            href={exam.resourceLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block w-full text-center py-2 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 rounded font-bold text-xs uppercase hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                                        >
+                                            View Study Material 📎
+                                        </a>
+                                    )}
                                     <button
                                         onClick={() => onTakeExam(exam)}
                                         className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium transition-colors"
