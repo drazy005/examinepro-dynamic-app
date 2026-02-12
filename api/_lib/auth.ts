@@ -9,6 +9,7 @@ const TOKEN_NAME = 'auth_token';
 export interface TokenPayload {
     userId: string;
     role: string;
+    email?: string;
 }
 
 export const authLib = {
