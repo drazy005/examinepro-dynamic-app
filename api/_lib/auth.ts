@@ -50,8 +50,8 @@ export const authLib = {
         const isProd = process.env.NODE_ENV === 'production';
         return serialize(TOKEN_NAME, token, {
             httpOnly: true,
-            secure: isProd,
-            sameSite: isProd ? 'none' : 'lax', // None + Secure is most robust for Prod HTTPS
+            secure: isProd, // Vercel is always HTTPS
+            sameSite: 'lax', // 'lax' is robust for OAuth redirects and same-domain app
             maxAge: 60 * 60 * 24, // 24 hours
             path: '/',
         });
@@ -63,7 +63,7 @@ export const authLib = {
         return serialize(TOKEN_NAME, '', {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? 'none' : 'lax',
+            sameSite: 'lax',
             maxAge: -1,
             path: '/',
         });

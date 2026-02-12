@@ -38,8 +38,9 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
       let errorMsg = res.statusText;
       try {
         const json = await res.json();
+        console.error("API Error Detail:", json);
         errorMsg = json.error || errorMsg;
-      } catch { }
+      } catch (e) { console.error("API Error Text:", await res.text()); }
       throw new Error(errorMsg);
     }
 

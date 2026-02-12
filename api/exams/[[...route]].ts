@@ -6,7 +6,7 @@ import { parse } from 'cookie';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cookies = parse(req.headers.cookie || '');
-    const token = cookies.auth_token;
+    const token = cookies.auth_token || req.headers.authorization?.split(' ')[1];
 
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     const user = authLib.verifyToken(token);

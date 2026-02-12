@@ -69,8 +69,9 @@ export const useExams = () => {
       const examsData = await api.exams.list();
       setExams(examsData);
     } catch (e: any) {
-      if (!silent && e.message !== 'Unauthorized' && e.message !== 'Forbidden') {
-        addToast('Failed to load exams.', 'error');
+      if (!silent) {
+        // Show actual error to user
+        addToast(`Failed to load exams: ${e.message}`, 'error');
       }
     }
   }, [addToast]);
