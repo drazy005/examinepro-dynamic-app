@@ -33,6 +33,8 @@ export function calculateGrade(exam: Exam & { questions: Question[] }, answers: 
                 result.score = q.points;
                 result.isCorrect = true;
                 totalScore += q.points;
+            } else {
+                console.log(`[Grading] Q ${q.id} Incorrect. User: '${normalizedUser}' vs Correct: '${normalizedCorrect}'`);
             }
         } else if (q.type === 'THEORY') {
             // Check for existing manual grade
@@ -49,6 +51,7 @@ export function calculateGrade(exam: Exam & { questions: Question[] }, answers: 
 
         questionResults[q.id] = result;
     }
+    console.log(`[Grading] Total: ${totalScore}/${maxScore}`);
 
     return {
         score: totalScore,

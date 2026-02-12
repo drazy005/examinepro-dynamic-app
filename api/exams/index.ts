@@ -19,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // URL: /api/exams/123?mode=available -> Segments: ['api', 'exams', '123']
     const urlObj = new URL(req.url!, `http://${req.headers.host}`);
     const segments = urlObj.pathname.split('/').filter(s => s !== '');
-    const pathId = segments.length > 2 ? segments[2] : null;
+    const pathId = (segments.length > 2 && segments[2] !== 'index') ? segments[2] : null;
 
     const { mode, action } = req.query;
 
@@ -137,21 +137,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // DELETE: Single
         if (req.method === 'DELETE') {
+            console.log(`[API] Deleting exam ${pathId}. User: ${user.userId}`);
             try {
                 const exam = await db.exam.findUnique({ where: { id: pathId } });
-                if (!exam) return res.status(404).json({ error: 'Exam not found' });
+                if (!exam) {
+                    console.log(`[API] Exam ${pathId} not found.`);
+                    return res.status(404).json({ error: 'Exam not found' });
+                }
 
                 const isAuthor = exam.authorId === user.userId;
                 const isSuperAdmin = user.role === 'SUPERADMIN';
 
                 if (!isAdmin || (!isAuthor && !isSuperAdmin)) {
+                    console.warn(`[API] Access denied for delete. isAuthor: ${isAuthor}, isSuper: ${isSuperAdmin}`);
                     return res.status(403).json({ error: 'Access denied' });
                 }
 
+                // Delete related submissions first? Prisma cascade handles this usually, but let's be safe
+                // or just rely on cascade.
                 await db.exam.delete({ where: { id: pathId } });
+                console.log(`[API] Exam ${pathId} deleted successfully.`);
                 return res.status(200).json({ success: true });
-            } catch (e) {
-                return res.status(500).json({ error: 'Delete failed' });
+            } catch (e: any) {
+                console.error(`[API] Delete failed for ${pathId}:`, e);
+                return res.status(500).json({ error: 'Delete failed: ' + e.message });
             }
         }
 
