@@ -1,7 +1,7 @@
 
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { db } from '../_lib/db.js';
-import { authLib } from '../_lib/auth.js';
+import { db } from '../../_lib/db.js';
+import { authLib } from '../../_lib/auth.js';
 import { parse } from 'cookie';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -15,17 +15,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const role = user.role as string;
     const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(role);
 
+    // Parse Route
+    const { route, mode, action } = req.query;
+    const pathId = Array.isArray(route) ? route[0] : (typeof route === 'string' ? route : null);
 
-    // === SINGLE ID OPERATIONS ===
-    const { id, mode, action } = req.query;
-
-    if (id && typeof id === 'string') {
-        // ACTION: Release Results
+    // Handlers for Specific ID (GET Detail, PUT Update, DELETE, POST Actions)
+    if (pathId) {
+        // ACTION: Release Results (POST /api/exams/123?action=release)
         if (req.method === 'POST' && action === 'release') {
             if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
             try {
                 await db.submission.updateMany({
-                    where: { examId: id },
+                    where: { examId: pathId },
                     data: { resultsReleased: true }
                 });
                 return res.status(200).json({ success: true });
@@ -38,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'GET') {
             try {
                 const exam = await db.exam.findUnique({
-                    where: { id },
+                    where: { id: pathId },
                     include: { questions: true }
                 });
 
@@ -69,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'PUT') {
             try {
                 const exam = await db.exam.findUnique({
-                    where: { id },
+                    where: { id: pathId },
                     include: { collaborators: { select: { id: true } } }
                 });
 
@@ -100,16 +101,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     version, resultRelease, reviewed, timerSettings, gradingPolicy
                 };
 
-                // Explicit field conversions
                 if (createdAt) {
-                    // If frontend sends timestamp (number), convert to Date
-                    // If string, let Prisma handle or ensure ISO
                     updateData.createdAt = typeof createdAt === 'number' ? new Date(createdAt) : createdAt;
                 }
 
-                // Remove undefined keys
                 Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
-
 
                 if (questions && Array.isArray(questions)) {
                     updateData.questions = {
@@ -122,8 +118,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         set: collaborators.filter((c: any) => c && c.id).map((c: any) => ({ id: c.id }))
                     };
                 }
+
                 const updated = await db.exam.update({
-                    where: { id },
+                    where: { id: pathId },
                     data: updateData
                 });
                 return res.status(200).json(updated);
@@ -136,7 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // DELETE: Single
         if (req.method === 'DELETE') {
             try {
-                const exam = await db.exam.findUnique({ where: { id } });
+                const exam = await db.exam.findUnique({ where: { id: pathId } });
                 if (!exam) return res.status(404).json({ error: 'Exam not found' });
 
                 const isAuthor = exam.authorId === user.userId;
@@ -146,19 +143,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(403).json({ error: 'Access denied' });
                 }
 
-                await db.exam.delete({ where: { id } });
+                await db.exam.delete({ where: { id: pathId } });
                 return res.status(200).json({ success: true });
             } catch (e) {
                 return res.status(500).json({ error: 'Delete failed' });
             }
         }
+
+        return res.status(405).json({ error: 'Method not allowed for ID' });
     }
 
-    // === LIST / CREATE OPERATIONS ===
+    // === LIST / CREATE (No ID in Route) ===
 
     // GET: List
     if (req.method === 'GET') {
-        // const { mode } = req.query; // pulled up
         if (mode === 'available') {
             const exams = await db.exam.findMany({
                 where: {
@@ -196,7 +194,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 showMcqScoreImmediately, resultRelease, createdAt
             } = req.body;
 
-            // Strict filtering for valid IDs to prevent "Argument id must not be null"
             const questionConnect = questions && Array.isArray(questions)
                 ? questions.filter((q: any) => q && q.id).map((q: any) => ({ id: q.id }))
                 : [];
@@ -235,7 +232,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     : scheduledReleaseDate;
             }
 
-            // Remove keys that are undefined/NaN
             Object.keys(createData).forEach(key => {
                 if (createData[key] === undefined) delete createData[key];
             });
@@ -247,7 +243,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json(exam);
         } catch (e: any) {
             console.error("Exam Creation Failed:", e);
-            // Return author ID in error to help debug auth issues if any
             return res.status(500).json({ error: `Create Failed. AuthorID: ${user?.userId}. Error: ${e.message}` });
         }
     }

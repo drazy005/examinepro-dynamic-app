@@ -41,6 +41,8 @@ interface AdminDashboardProps {
   onDeleteTemplate?: (id: string) => void;
   onBulkDeleteQuestions: (ids: string[]) => void;
   onPurgeQuestions: (type: string) => void;
+  onDeleteAnnouncement?: (id: string) => void;
+  onBulkDeleteAnnouncements?: (ids: string[]) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
@@ -57,7 +59,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   onUpdateBankQuestion,
   onDeleteFromBank,
   onBulkDeleteQuestions,
-  onPurgeQuestions
+
+  onPurgeQuestions,
+  onDeleteAnnouncement,
+  onBulkDeleteAnnouncements
 }) => {
   const { settings: systemSettings } = useSystem();
   const { addToast } = useToast();
@@ -357,8 +362,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
               ) : (
                 <div className="space-y-4">
                   {publishedAnnouncements.map(post => (
-                    <div key={post.id} className="p-5 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/20">
-                      <div className="flex justify-between items-start mb-2">
+                    <div key={post.id} className="p-5 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/20 group relative">
+                      {onDeleteAnnouncement && (
+                        <button
+                          onClick={() => { if (confirm('Delete announcement?')) onDeleteAnnouncement(post.id); }}
+                          className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-slate-900 rounded-full shadow-sm"
+                          title="Delete Announcement"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      )}
+                      <div className="flex justify-between items-start mb-2 pr-6">
                         <h4 className="font-bold text-amber-900 dark:text-amber-100">{post.title}</h4>
                         <span className="text-[10px] font-bold uppercase text-amber-500/70">{new Date(post.createdAt).toLocaleDateString()}</span>
                       </div>
@@ -635,6 +649,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                   <div>
                     <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Exam Title</label>
                     <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold" value={editingExam.title} onChange={e => setEditingExam({ ...editingExam, title: e.target.value })} placeholder="e.g. Final Anatomy Assessment" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Resource Link (Source Material)</label>
+                    <input className="w-full p-4 theme-rounded bg-slate-50 dark:bg-slate-950 font-bold text-sm" value={editingExam.resourceLink || ''} onChange={e => setEditingExam({ ...editingExam, resourceLink: e.target.value })} placeholder="e.g. Google Drive URL or PDF Link (Inaccessible during exam)" />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -930,15 +949,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
           onClose={() => setSelectedSubmission(null)}
           systemSettings={systemSettings}
           isAdmin={true}
-          onManualGrade={(qId, res) => {
+          onReGrade={async () => {
+            await handleAIGradeSubmission(selectedSubmission.sub.id);
+          }}
+          onMarkReviewed={async () => {
+            await fetchSubmissions(submissionsData.page);
+            // Optionally close or keep open. If keeping open, we need to update selectedSubmission locally.
+            // For now, let the modal close itself on success (it does).
+          }}
+          onManualGrade={async (qId, res) => {
             // Adapt the call to the prop
             if (selectedSubmission) {
-              handleManualGrade(selectedSubmission.sub.id, qId, res);
-              // We don't manually update local state here anymore because the parent handles the definitive update
-              // and passes back the new submissions list.
-              setSelectedSubmission(null); // Close to refresh/avoid stale state or keep open handled by state? 
-              // Simple approach: Close modal on save.
-              addToast('Grade saved', 'success');
+              await handleManualGrade(selectedSubmission.sub.id, qId, res);
+              // Updating local state or fetching will happen via handleManualGrade -> fetchSubmissions
+              // But selectedSubmission is stale. We should probably re-fetch it or close.
+              // Closing for simplicity as manual grading usually implies finishing touch.
+              // Or better: update local selectedSubmission score?
+              // The modal uses internal state for editing but displays props.
+              // For now, let's just refresh list.
             }
           }}
         />

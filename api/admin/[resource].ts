@@ -218,6 +218,25 @@ async function handleAnnouncements(req: VercelRequest, res: VercelResponse, user
         return res.status(200).json(results);
     }
 
+    if (req.method === 'DELETE') {
+        if ((user.role as string) !== 'SUPERADMIN') return res.status(403).json({ error: 'Forbidden' });
+
+        const { id } = req.query;
+        if (id && typeof id === 'string') {
+            await db.blogPost.delete({ where: { id } });
+            return res.status(200).json({ success: true, id });
+        }
+
+        // Batch delete from body
+        const { ids } = req.body;
+        if (ids && Array.isArray(ids)) {
+            await db.blogPost.deleteMany({ where: { id: { in: ids } } });
+            return res.status(200).json({ success: true, count: ids.length });
+        }
+
+        return res.status(400).json({ error: 'Missing id or ids' });
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
 }
 

@@ -20,7 +20,8 @@ export enum Difficulty {
 export enum GradingStatus {
   GRADED = 'GRADED',
   PENDING_MANUAL_REVIEW = 'PENDING_MANUAL_REVIEW',
-  UNGRADED = 'UNGRADED'
+  UNGRADED = 'UNGRADED',
+  REVIEWED = 'REVIEWED'
 }
 
 export enum ResultRelease {
@@ -204,6 +205,8 @@ export interface Exam {
   warningTimeThreshold?: number;
   showMcqScoreImmediately?: boolean;
   resultReleaseMode?: 'MANUAL' | 'SCHEDULED' | 'INSTANT';
+  resourceLink?: string;
+  reviewed?: boolean;
 }
 
 export interface ExamTemplate {
@@ -248,6 +251,9 @@ export interface Submission {
   timeSpentMs?: number;
   isLate?: boolean;
   source?: string;
+
+  reviewedAt?: string | Date;
+  reviewedBy?: string;
 
   // Hydrated fields from API
   user?: { name: string; email: string; id?: string };

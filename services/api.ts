@@ -89,9 +89,10 @@ export const api = {
     grade: (submissionId: string, questionId: string, result: any) => request<void>(`/submissions?id=${submissionId}&action=grade`, { method: 'POST', body: JSON.stringify({ questionId, result }) }),
     release: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=release`, { method: 'POST' }),
     toggleRelease: (submissionId: string, release: boolean) => request<void>(`/submissions?id=${submissionId}&action=toggle-release`, { method: 'POST', body: JSON.stringify({ release }) }),
-    releaseAll: () => request<void>('/submissions?action=release-all', { method: 'POST' }),
+    releaseAll: () => request<void>('/submissions?action=release-all-scheduled', { method: 'POST' }),
     regradeAll: () => request<{ success: boolean; count: number }>('/submissions?action=regrade-all', { method: 'POST' }),
     aiGrade: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=ai-grade`, { method: 'POST' }),
+    markReviewed: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=review`, { method: 'POST' }),
     bulkDelete: (ids: string[]) => request<void>(`/submissions?ids=${ids.join(',')}`, { method: 'DELETE' }),
   },
   admin: {
@@ -111,6 +112,8 @@ export const api = {
     announcements: {
       list: () => request<any[]>('/admin/announcements'),
       create: (data: any[]) => request<any[]>('/admin/announcements', { method: 'POST', body: JSON.stringify(data) }),
+      delete: (id: string) => request<void>(`/admin/announcements?id=${id}`, { method: 'DELETE' }),
+      bulkDelete: (ids: string[]) => request<void>('/admin/announcements', { method: 'DELETE', body: JSON.stringify({ ids }) }),
     },
   },
   settings: {

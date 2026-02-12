@@ -121,28 +121,30 @@ const CandidatePortal: React.FC<CandidatePortalProps> = ({ announcements, onTake
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                                <tr>
-                                    <th className="p-4 font-semibold text-sm">Exam Title</th>
-                                    <th className="p-4 font-semibold text-sm">Date Taken</th>
-                                    <th className="p-4 font-semibold text-sm">Score</th>
-                                    <th className="p-4 font-semibold text-sm">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {Array.isArray(history) && history.map(sub => (
-                                    <tr key={sub.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                        <td className="p-4 font-medium">{(sub.exam && sub.exam.title) || 'Unknown Exam'}</td>
-                                        <td className="p-4 text-slate-500">{safelyFormatDate(sub.submittedAt)}</td>
-                                        <td className="p-4">{getResultDisplay(sub)}</td>
-                                        <td className="p-4">
-                                            {sub.resultsReleased && <button onClick={() => onViewDetails(sub)} className="text-indigo-600 hover:underline text-sm font-bold">View Details</button>}
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                                    <tr>
+                                        <th className="p-4 font-semibold text-sm whitespace-nowrap">Exam Title</th>
+                                        <th className="p-4 font-semibold text-sm whitespace-nowrap">Date Taken</th>
+                                        <th className="p-4 font-semibold text-sm whitespace-nowrap">Score</th>
+                                        <th className="p-4 font-semibold text-sm whitespace-nowrap">Action</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {Array.isArray(history) && history.map(sub => (
+                                        <tr key={sub.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                            <td className="p-4 font-medium min-w-[200px]">{(sub.exam && sub.exam.title) || 'Unknown Exam'}</td>
+                                            <td className="p-4 text-slate-500 whitespace-nowrap">{safelyFormatDate(sub.submittedAt)}</td>
+                                            <td className="p-4 whitespace-nowrap">{getResultDisplay(sub)}</td>
+                                            <td className="p-4 whitespace-nowrap">
+                                                {sub.resultsReleased && <button onClick={() => onViewDetails(sub)} className="text-indigo-600 hover:underline text-sm font-bold">View Details</button>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                         {(!history || history.length === 0) && <div className="p-8 text-center text-slate-500">No past exams found.</div>}
                     </div>
                 )}

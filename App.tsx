@@ -141,6 +141,26 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteAnnouncement = async (id: string) => {
+    try {
+      await api.admin.announcements.delete(id);
+      setAnnouncements(prev => prev.filter(p => p.id !== id));
+      addToast('Announcement deleted', 'success');
+    } catch (e) {
+      addToast('Failed to delete announcement', 'error');
+    }
+  };
+
+  const handleBulkDeleteAnnouncements = async (ids: string[]) => {
+    try {
+      await api.admin.announcements.bulkDelete(ids);
+      setAnnouncements(prev => prev.filter(p => !ids.includes(p.id)));
+      addToast('Announcements deleted', 'success');
+    } catch (e) {
+      addToast('Failed to delete announcements', 'error');
+    }
+  };
+
   const handleTogglePublish = async (id: string, published: boolean) => {
     try {
       // Corrected: separate id and data arguments
@@ -172,7 +192,6 @@ const App: React.FC = () => {
       // Fallback: Fetch full exam details if questions are still missing
       // Note: Admin preview fetched it above. Candidate start fetched it via session.
       if (!fullExam.questions || fullExam.questions.length === 0) {
-        console.log("Fetching full exam details separately (fallback)...");
         try {
           const fetched = await api.exams.get(exam.id);
           if (fetched && fetched.questions && fetched.questions.length > 0) {

@@ -3,6 +3,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../_lib/db.js';
 import { authLib } from '../_lib/auth.js';
 import { parse } from 'cookie';
+import { calculateGrade } from '../_lib/grading.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cookies = parse(req.headers.cookie || '');
@@ -36,18 +37,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     if (!submission) return res.status(404).json({ error: 'Submission not found' });
 
                     const currentResults: any = submission.questionResults || {};
-                    currentResults[questionId] = result;
+                    // Ensure result has score and isCorrect
+                    currentResults[questionId] = {
+                        score: Number(result.score) || 0,
+                        isCorrect: result.isCorrect ?? (Number(result.score) > 0)
+                    };
 
-                    const newScore = Object.values(currentResults).reduce((acc: number, r: any) => acc + (r.score || 0), 0);
-                    const allGraded = Object.values(currentResults).every((r: any) => r.isCorrect !== undefined);
+                    const fullSubmission = await db.submission.findUnique({
+                        where: { id },
+                        include: { exam: { include: { questions: true } } }
+                    });
+
+                    if (!fullSubmission || !fullSubmission.exam) return res.status(404).json({ error: 'Data sync error' });
+
+                    const gradeResult = calculateGrade(
+                        fullSubmission.exam,
+                        fullSubmission.answers as Record<string, any>,
+                        currentResults
+                    );
 
                     await db.submission.update({
                         where: { id },
                         data: {
-                            questionResults: currentResults,
-                            score: newScore,
-                            status: allGraded ? 'GRADED' : 'PENDING_MANUAL_REVIEW',
-                            graded: allGraded
+                            questionResults: gradeResult.questionResults,
+                            score: gradeResult.score,
+                            status: gradeResult.status,
+                            graded: gradeResult.graded
                         }
                     });
                     return res.status(200).json({ success: true });
@@ -78,7 +93,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ success: true, released: release });
             }
 
-            // Fallthrough for generic update? No, that's PUT.
+            if (action === 'regrade') {
+                if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+                try {
+                    const submission = await db.submission.findUnique({
+                        where: { id },
+                        include: { exam: { include: { questions: true } } }
+                    });
+
+                    if (!submission || !submission.exam) return res.status(404).json({ error: 'Not found' });
+
+                    const gradeResult = calculateGrade(
+                        submission.exam,
+                        submission.answers as Record<string, any>,
+                        submission.questionResults as Record<string, any>
+                    );
+
+                    await db.submission.update({
+                        where: { id },
+                        data: {
+                            score: gradeResult.score,
+                            questionResults: gradeResult.questionResults,
+                            status: gradeResult.status,
+                            graded: gradeResult.graded
+                        }
+                    });
+
+                    return res.status(200).json({ success: true, result: gradeResult });
+                } catch (e) { return res.status(500).json({ error: 'Regrade failed' }); }
+            }
+
+            if (action === 'review') {
+                if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+                try {
+                    await db.submission.update({
+                        where: { id },
+                        data: {
+                            status: 'REVIEWED',
+                            reviewedAt: new Date(),
+                            reviewedBy: user.userId
+                        }
+                    });
+                    return res.status(200).json({ success: true });
+                } catch (e) { return res.status(500).json({ error: 'Failed' }); }
+            }
+
             return res.status(400).json({ error: 'Invalid action' });
         }
 
@@ -91,10 +150,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         exam: {
                             select: {
                                 title: true,
+                                totalPoints: true,
+                                passMark: true,
                                 questions: {
                                     select: {
                                         id: true, text: true, type: true, options: true, points: true,
-                                        correctAnswer: true // Always fetch, sanitize later
+                                        correctAnswer: true, // Always fetch, sanitize later
+                                        imageUrl: true
                                     }
                                 }
                             }
@@ -116,7 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             ...mapped.exam,
                             questions: mapped.exam.questions.map(q => ({ ...q, correctAnswer: undefined }))
                         },
-                        questionResults: undefined
+                        questionResults: undefined // Hide results until released
                     };
                     return res.status(200).json(sanitizedSubmission);
                 }
@@ -144,41 +206,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     'score', 'status', 'graded', 'resultsReleased'
                 ];
 
-                // Allow params that are not directly in schema but used for logic below (none currently, logic uses updates.answers)
-
                 // Filter updates to include only allowable keys
                 Object.keys(updates).forEach(key => {
                     if (!allowedFields.includes(key)) delete updates[key];
                 });
 
                 if (updates.answers && submission.exam) {
-                    const exam = submission.exam;
-                    let totalScore = 0;
-                    const questionResults: Record<string, any> = {};
-                    let requiresManualGrading = false;
+                    const gradeResult = calculateGrade(
+                        submission.exam,
+                        updates.answers,
+                        (updates.questionResults || submission.questionResults) as Record<string, any>
+                    );
 
-                    for (const q of exam.questions) {
-                        const userAnswer = updates.answers[q.id];
-                        const result: any = { score: 0, isCorrect: false };
-
-                        if (q.type === 'MCQ' || q.type === 'SBA') {
-                            if (userAnswer === q.correctAnswer) {
-                                result.score = q.points;
-                                result.isCorrect = true;
-                                totalScore += q.points;
-                            }
-                        } else if (q.type === 'THEORY') {
-                            result.score = 0;
-                            requiresManualGrading = true;
-                        }
-                        questionResults[q.id] = result;
-                    }
-
-                    updates.score = totalScore;
-                    updates.questionResults = questionResults;
-                    updates.status = requiresManualGrading ? 'PENDING_MANUAL_REVIEW' : 'GRADED';
-                    updates.graded = !requiresManualGrading;
-                    updates.resultsReleased = exam.resultRelease === 'INSTANT';
+                    updates.score = gradeResult.score;
+                    updates.questionResults = gradeResult.questionResults;
+                    updates.status = gradeResult.status;
+                    updates.graded = gradeResult.graded;
+                    updates.resultsReleased = submission.exam.resultRelease === 'INSTANT';
                 }
 
                 const updated = await db.submission.update({ where: { id }, data: updates });
@@ -211,26 +255,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (!exam) return res.status(404).json({ error: 'Exam not found' });
             if (!exam.published && !isAdmin) return res.status(403).json({ error: 'Exam not published' });
 
-            // Check for existing attempt (resume if not released?)
-            // For now, if there is a submission that is not released, resume it?
-            // Schema has 'resultsReleased'. 
-            // Also we might want to check if time limit expired. 
-            // For MVP, look for the most recent submission.
+            // Look for existing active submission (most recent)
             const existing = await db.submission.findFirst({
                 where: { userId: user.userId, examId: examId },
                 orderBy: { submittedAt: 'desc' }
             });
 
             // Resume if existing and NOT graded/released? 
-            // OR if time is not up?
-            // For simplicity: if it's UNGRADED, resume it.
             if (existing && existing.status === 'UNGRADED' && !existing.resultsReleased) {
                 const sanitizedQuestions = exam.questions.map(q => ({
                     id: q.id,
                     text: q.text,
                     type: q.type,
                     options: q.options,
-                    points: q.points
+                    points: q.points,
+                    imageUrl: q.imageUrl
                 }));
 
                 return res.status(200).json({
@@ -238,7 +277,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         ...exam,
                         questions: sanitizedQuestions
                     },
-                    startTime: existing.submittedAt.getTime(), // Or created time if we had it? submittedAt defaults to now() on create
+                    startTime: existing.submittedAt.getTime(),
                     submissionId: existing.id,
                     answersDraft: existing.answersDraft || {},
                     resumed: true
@@ -246,7 +285,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             // Create New Submission
-            // We set submittedAt to NOW, which marks the start time.
             const newSubmission = await db.submission.create({
                 data: {
                     examId,
@@ -265,12 +303,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 text: q.text,
                 type: q.type,
                 options: q.options,
-                points: q.points
+                points: q.points,
+                imageUrl: q.imageUrl
             }));
+
+            // Exclude source link from active attempt
+            const { resourceLink, ...safeExamLabels } = exam as any;
 
             return res.status(200).json({
                 exam: {
-                    ...exam, // valid: spreads all scalar fields (timerSettings, etc)
+                    ...safeExamLabels,
+                    resourceLink: undefined, // Explicitly undefined
                     questions: sanitizedQuestions
                 },
                 startTime: newSubmission.submittedAt.getTime(),
@@ -300,29 +343,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        // Release All
-        // Action: Release Results (Toggle)
-        if (action === 'toggle-release') {
+        // Release All for specific Exam
+        if (action === 'release-exam') {
             if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
-            // Expecting body: { release: boolean }
-            const { release } = req.body;
-            if (typeof release !== 'boolean') return res.status(400).json({ error: 'Exepcted boolean release state' });
+            const { examId } = req.body;
+            if (!examId) return res.status(400).json({ error: 'Missing examId' });
 
             try {
-                await db.submission.update({
-                    where: { id: Array.isArray(id) ? id[0] : id },
-                    data: { resultsReleased: release }
+                const count = await db.submission.updateMany({
+                    where: { examId, resultsReleased: false }, // Only unreleased
+                    data: { resultsReleased: true }
                 });
-                return res.status(200).json({ success: true, released: release });
-            } catch (e) { return res.status(500).json({ error: 'Failed' }); }
+                return res.status(200).json({ success: true, count: count.count });
+            } catch (e) { return res.status(500).json({ error: 'Failed to release exam results' }); }
         }
 
-        // Action: Release All Delayed (Smart Release)
-        // Releases all submissions where Exam is SCHEDULED and Date is Past
-        if (action === 'release-all') {
+        // Release All Scheduled (Global Check)
+        if (action === 'release-all-scheduled') {
             if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
             try {
-                // 1. Find all SCHEDULED exams that are due
                 const dueExams = await db.exam.findMany({
                     where: {
                         resultReleaseMode: 'SCHEDULED',
@@ -334,7 +373,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const dueExamIds = dueExams.map(e => e.id);
 
                 if (dueExamIds.length > 0) {
-                    // 2. Release all unreleased submissions for these exams
                     await db.submission.updateMany({
                         where: {
                             examId: { in: dueExamIds },
@@ -364,55 +402,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let updateCount = 0;
 
                 for (const sub of submissions) {
-                    if (!sub.exam) continue; // Orphaned submission?
+                    if (!sub.exam) continue;
 
-                    let newScore = 0;
-                    const newQuestionResults: Record<string, any> = {};
-                    let requiresManual = false;
-
-                    // Re-run grading logic
-                    for (const q of sub.exam.questions) {
-                        const userAnswer = (sub.answers as any)[q.id];
-                        const result: any = { score: 0, isCorrect: false };
-
-                        if (q.type === 'MCQ' || q.type === 'SBA') {
-                            // Loose comparison (trim and stringify)
-                            if (String(userAnswer || '').trim() === String(q.correctAnswer || '').trim()) {
-                                result.score = q.points;
-                                result.isCorrect = true;
-                                newScore += q.points;
-                            }
-                        } else if (q.type === 'THEORY') {
-                            // Preserve existing manual score if available, otherwise 0
-                            const existingResult = (sub.questionResults as any)?.[q.id];
-                            if (existingResult && existingResult.score !== undefined) {
-                                result.score = existingResult.score;
-                                newScore += result.score;
-                            } else {
-                                requiresManual = true;
-                            }
-                        }
-                        newQuestionResults[q.id] = result;
-                    }
+                    const gradeResult = calculateGrade(
+                        sub.exam,
+                        sub.answers as Record<string, any>,
+                        sub.questionResults as Record<string, any>
+                    );
 
                     // Strict Update Logic
-                    const newStatus = requiresManual ? 'PENDING_MANUAL_REVIEW' : 'GRADED';
-                    const newGraded = !requiresManual;
-
                     if (
-                        sub.score !== newScore ||
-                        !sub.questionResults ||
-                        sub.status !== newStatus ||
-                        sub.graded !== newGraded
+                        sub.score !== gradeResult.score ||
+                        JSON.stringify(sub.questionResults) !== JSON.stringify(gradeResult.questionResults) ||
+                        sub.status !== gradeResult.status ||
+                        sub.graded !== gradeResult.graded
                     ) {
-                        console.log(`[Regrade] Updating ${sub.id}: Score ${sub.score} -> ${newScore}`);
+                        console.log(`[Regrade] Updating ${sub.id}: Score ${sub.score} -> ${gradeResult.score}`);
                         await db.submission.update({
                             where: { id: sub.id },
                             data: {
-                                score: newScore,
-                                questionResults: newQuestionResults,
-                                status: newStatus,
-                                graded: newGraded
+                                score: gradeResult.score,
+                                questionResults: gradeResult.questionResults,
+                                status: gradeResult.status,
+                                graded: gradeResult.graded
                             }
                         });
                         updateCount++;
@@ -439,7 +451,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         where: { userId: user.userId },
                         orderBy: { submittedAt: 'desc' },
                         include: {
-                            exam: { select: { title: true } }
+                            exam: { select: { title: true, totalPoints: true } }
                         }
                     });
                     const mapped = mySubmissions.map(s => ({
@@ -449,7 +461,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json(mapped);
                 } catch (historyError) {
                     console.error("History fetch error:", historyError);
-                    // Fallback to simple fetch if relation failed
                     const raw = await db.submission.findMany({
                         where: { userId: user.userId },
                         orderBy: { submittedAt: 'desc' }
@@ -470,7 +481,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 // Verify count first
                 total = await db.submission.count();
-                console.log(`[Submissions] Total count in DB: ${total}`);
 
                 if (total === 0) {
                     return res.status(200).json({
@@ -485,14 +495,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         take: limit,
                         include: {
                             user: { select: { name: true, email: true } },
-                            exam: { select: { title: true } }
+                            exam: { select: { title: true, totalPoints: true } }
                         },
                         orderBy: { submittedAt: 'desc' }
                     }),
                     db.submission.count()
                 ]);
             } catch (err: any) {
-                // Fallback if include fails due to broken relations: fetch raw and invalid relations are ignored (nullable in map)
                 console.error("Submission Fetch Error (Include failed?):", err);
                 const rawSubs = await db.submission.findMany({
                     skip,
@@ -500,10 +509,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     orderBy: { submittedAt: 'desc' }
                 });
                 total = await db.submission.count();
-
-                // Manually populate headers if needed, or just return raw (names will be missing)
-                // For valid display, we try to fetch names separately? 
-                // Too complex for now. Just return raw and let frontend say "Unknown".
                 submissions = rawSubs.map(s => ({ ...s, user: null, exam: null }));
             }
 
@@ -539,37 +544,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (!exam) return res.status(404).json({ error: 'Exam not found' });
 
-            let totalScore = 0;
-            const questionResults: Record<string, any> = {};
-            let requiresManualGrading = false;
-
-            for (const q of exam.questions) {
-                const userAnswer = answers[q.id];
-                const result: any = { score: 0, isCorrect: false };
-
-                if (q.type === 'MCQ' || q.type === 'SBA') {
-                    if (userAnswer === q.correctAnswer) {
-                        result.score = q.points;
-                        result.isCorrect = true;
-                        totalScore += q.points;
-                    }
-                } else if (q.type === 'THEORY') {
-                    result.score = 0;
-                    requiresManualGrading = true;
-                }
-                questionResults[q.id] = result;
-            }
+            const gradeResult = calculateGrade(exam, answers);
 
             const submission = await db.submission.create({
                 data: {
                     examId,
                     userId: user.userId,
                     answers,
-                    questionResults,
-                    score: totalScore,
+                    questionResults: gradeResult.questionResults,
+                    score: gradeResult.score,
                     timeSpentMs: Number(timeSpentMs) || 0,
-                    status: requiresManualGrading ? 'PENDING_MANUAL_REVIEW' : 'GRADED',
-                    graded: !requiresManualGrading,
+                    status: gradeResult.status,
+                    graded: gradeResult.graded,
                     resultsReleased: exam.resultRelease === 'INSTANT',
                     submittedAt: new Date(),
                 }
@@ -580,18 +566,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error('Submission error:', e);
             return res.status(500).json({ error: 'Failed to submit exam' });
         }
-    }
-
-    // DELETE: Bulk Delete
-    if (req.method === 'DELETE') {
-        if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
-        const { ids } = req.query; // ?ids=1,2,3
-        if (ids && typeof ids === 'string') {
-            const idArray = ids.split(',');
-            await db.submission.deleteMany({ where: { id: { in: idArray } } });
-            return res.status(200).json({ success: true });
-        }
-        return res.status(400).json({ error: 'Missing ids' });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

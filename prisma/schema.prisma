@@ -38,6 +38,7 @@ enum GradingStatus {
   UNGRADED
   PENDING_MANUAL_REVIEW
   GRADED
+  REVIEWED
 }
 
 enum ResultReleaseMode {
@@ -90,6 +91,7 @@ model Exam {
   version         Int           @default(1)
   resultRelease   ResultRelease @default(INSTANT)
   reviewed        Boolean       @default(false)
+  resourceLink    String?       // Companion material link
   
   // JSON settings for flexibility (Timer, Grading Policy)
   timerSettings   Json
@@ -142,6 +144,9 @@ model Submission {
   
   submittedAt           DateTime      @default(now())
   timeSpentMs           Int           @default(0)
+  
+  reviewedAt            DateTime?
+  reviewedBy            String?
 
   user                  User          @relation(fields: [userId], references: [id])
   exam                  Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)

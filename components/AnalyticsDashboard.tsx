@@ -175,7 +175,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ exams, submissi
                                         <p className="text-sm text-slate-500 italic">No submissions found for this exam.</p>
                                     ) : (
                                         reviewSubmissions.map(sub => {
-                                            const student = users.find(u => u.id === sub.studentId);
+                                            const studentName = sub.user?.name || users.find(u => u.id === sub.userId)?.name || 'Unknown Candidate';
                                             const grade = (sub.score / reviewExam.totalPoints * 100);
                                             return (
                                                 <div
@@ -184,7 +184,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ exams, submissi
                                                     className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-indigo-50 dark:hover:bg-slate-700 cursor-pointer transition-colors border border-transparent hover:border-indigo-200 group"
                                                 >
                                                     <div>
-                                                        <p className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-indigo-700 text-left">{student?.name || 'Unknown Candidate'}</p>
+                                                        <p className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-indigo-700 text-left">{studentName}</p>
                                                         <p className="text-xs text-slate-500">{new Date(sub.submittedAt).toLocaleDateString()}</p>
                                                     </div>
                                                     <div className="text-right">
