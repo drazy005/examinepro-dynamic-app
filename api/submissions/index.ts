@@ -253,6 +253,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Start Attempt
         if (action === 'start') {
             const { examId } = req.body;
+            console.log(`[API] Start Exam Payload:`, JSON.stringify(req.body));
             if (!examId) return res.status(400).json({ error: 'Missing Exam ID' });
 
             const exam = await db.exam.findUnique({
@@ -545,6 +546,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST' && !action) {
         try {
             const { examId, answers, timeSpentMs } = req.body;
+            console.log(`[API] Create Submission Payload. ExamId: ${examId}, Answers Keys: ${Object.keys(answers || {}).join(',')}`);
 
             const exam = await db.exam.findUnique({
                 where: { id: examId },

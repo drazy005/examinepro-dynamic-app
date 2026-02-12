@@ -17,11 +17,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Parse Route manually (Vercel Rewrite /api/exams/:id -> /api/exams/index.ts)
     // URL: /api/exams/123?mode=available -> Segments: ['api', 'exams', '123']
+    const { mode, action, id } = req.query;
+
+    // Parse Route manually (Vercel Rewrite /api/exams/:id -> /api/exams/index.ts)
+    // URL: /api/exams/123?mode=available -> Segments: ['api', 'exams', '123']
     const urlObj = new URL(req.url!, `http://${req.headers.host}`);
     const segments = urlObj.pathname.split('/').filter(s => s !== '');
-    const pathId = (segments.length > 2 && segments[2] !== 'index') ? segments[2] : null;
-
-    const { mode, action } = req.query;
+    const pathId = (segments.length > 2 && segments[2] !== 'index') ? segments[2] : (id as string || null);
 
     // Handlers for Specific ID (GET Detail, PUT Update, DELETE, POST Actions)
     if (pathId) {
