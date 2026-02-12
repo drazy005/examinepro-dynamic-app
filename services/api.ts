@@ -35,12 +35,17 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
     });
 
     if (!res.ok) {
+      const text = await res.text();
       let errorMsg = res.statusText;
       try {
-        const json = await res.json();
+        const json = JSON.parse(text);
         console.error("API Error Detail:", json);
         errorMsg = json.error || errorMsg;
-      } catch (e) { console.error("API Error Text:", await res.text()); }
+      } catch (e) {
+        console.error("API Error Text:", text);
+        // If text is HTML (Vercel 404/500 page), showing it is helpful
+        if (text.includes('<!DOCTYPE html>')) errorMsg = `Server Error (${res.status})`;
+      }
       throw new Error(errorMsg);
     }
 
