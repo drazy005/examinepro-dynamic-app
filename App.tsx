@@ -90,10 +90,18 @@ const App: React.FC = () => {
 
     // Accept standard roles including mixed case
     if (['ADMIN', 'SUPERADMIN', 'CANDIDATE'].includes(role)) {
-      console.log('[App] Refreshing questions and exams...');
-      // Pass FALSE to silent param to ensure errors are TOASTED to the user
-      refreshQuestions(false).catch(e => console.error("[App] Questions refresh failed:", e));
-      refreshExams(false).catch(e => console.error("[App] Exams refresh failed:", e));
+      console.log('[App] Refreshing data...');
+
+      const isCandidate = role === 'CANDIDATE';
+
+      // Questions are only needed for Admins (Bank)
+      if (!isCandidate) {
+        // Pass FALSE to silent param to ensure errors are TOASTED to the user
+        refreshQuestions(false).catch(e => console.error("[App] Questions refresh failed:", e));
+      }
+
+      // Exams: Candidates see 'available', Admins see 'all'
+      refreshExams(false, isCandidate ? 'available' : 'all').catch(e => console.error("[App] Exams refresh failed:", e));
     } else {
       console.warn(`[App] Role ${role} not recognized for auto-refresh.`);
     }

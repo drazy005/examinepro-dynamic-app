@@ -907,7 +907,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                               }
                             }} className="text-emerald-600 text-xs font-bold uppercase hover:underline">Add Time</button>
 
-                            <button onClick={(e) => { e.stopPropagation(); onBulkDeleteExams([exam.id]); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
+                            <button onClick={(e) => { e.stopPropagation(); onDeleteExam(exam.id); }} className="text-red-500 text-xs font-bold uppercase hover:underline">Delete</button>
                           </div>
                         </div>
                       </div>

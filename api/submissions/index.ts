@@ -207,6 +207,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (submission.userId !== user.userId && !isAdmin) return res.status(403).json({ error: 'Access denied' });
 
                 const updates = req.body;
+                console.log(`[API] Update Submission Payload. ID: ${id}, Keys: ${Object.keys(updates).join(',')}`);
+                if (updates.answers) {
+                    console.log(`[API] Update Answers Keys: ${Object.keys(updates.answers).join(',')}`);
+                }
 
                 // Whitelist allowed fields to prevent "Unknown argument" errors
                 const allowedFields = [
@@ -576,6 +580,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (e) {
             console.error('Submission error:', e);
             return res.status(500).json({ error: 'Failed to submit exam' });
+        }
+    }
+
+    // DELETE: Bulk Delete
+    if (req.method === 'DELETE') {
+        if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
+
+        const { ids } = req.query;
+        if (!ids || typeof ids !== 'string') {
+            return res.status(400).json({ error: 'Missing ids query parameter' });
+        }
+
+        const idList = ids.split(',').filter(s => s);
+
+        if (idList.length === 0) {
+            return res.status(400).json({ error: 'No IDs provided' });
+        }
+
+        try {
+            await db.submission.deleteMany({
+                where: { id: { in: idList } }
+            });
+            return res.status(200).json({ success: true, count: idList.length });
+        } catch (e) {
+            console.error("Bulk delete failed:", e);
+            return res.status(500).json({ error: 'Failed to delete submissions' });
         }
     }
 

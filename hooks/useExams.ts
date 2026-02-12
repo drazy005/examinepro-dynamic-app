@@ -64,9 +64,9 @@ export const useExams = () => {
     }
   }, [exams, addToast]);
 
-  const refreshExams = useCallback(async (silent = false) => {
+  const refreshExams = useCallback(async (silent = false, mode: 'all' | 'available' = 'all') => {
     try {
-      const examsData = await api.exams.list();
+      const examsData = await api.exams.list(mode);
       setExams(examsData);
     } catch (e: any) {
       if (!silent) {
