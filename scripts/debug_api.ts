@@ -50,7 +50,7 @@ async function main() {
         return;
     }
     console.log("Using Admin:", admin.email);
-    const token = authLib.signToken({ userId: admin.id, role: admin.role, email: admin.email });
+    const token = authLib.signToken({ userId: admin.id, role: 'ADMIN', email: admin.email });
 
     // 3. Test GET Exams
     console.log("\n--- Testing GET /api/exams ---");

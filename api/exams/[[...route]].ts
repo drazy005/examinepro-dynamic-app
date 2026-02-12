@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = authLib.verifyToken(token);
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
-    const role = user.role as string;
+    const role = (user.role as string).toUpperCase();
     const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(role);
 
     // Parse Route
