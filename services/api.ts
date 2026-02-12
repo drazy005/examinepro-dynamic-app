@@ -36,7 +36,7 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
 
     if (!res.ok) {
       const text = await res.text();
-      let errorMsg = res.statusText;
+      let errorMsg = res.statusText || `Request failed with status ${res.status}`;
       try {
         const json = JSON.parse(text);
         console.error("API Error Detail:", json);
