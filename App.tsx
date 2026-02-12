@@ -82,9 +82,13 @@ const App: React.FC = () => {
   }, [handleLogout]);
 
   useEffect(() => {
-    if (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) {
+    const role = user?.role?.toUpperCase();
+    if (role === 'ADMIN' || role === 'SUPERADMIN' || role === 'CANDIDATE') {
       refreshQuestions(true); // Silent
       refreshExams(true);     // Silent
+      // Note: Candidates only need exams, but refreshing questions doesn't hurt (or we can skip).
+      // actually, candidate portal fetches its own available exams.
+      // But StudentDashboard (if used) needs this.
     }
   }, [user, refreshQuestions, refreshExams]);
 

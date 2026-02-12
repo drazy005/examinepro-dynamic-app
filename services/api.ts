@@ -91,6 +91,7 @@ export const api = {
     toggleRelease: (submissionId: string, release: boolean) => request<void>(`/submissions?id=${submissionId}&action=toggle-release`, { method: 'POST', body: JSON.stringify({ release }) }),
     releaseAll: () => request<void>('/submissions?action=release-all-scheduled', { method: 'POST' }),
     regradeAll: () => request<{ success: boolean; count: number }>('/submissions?action=regrade-all', { method: 'POST' }),
+    regrade: (id: string) => request<{ success: boolean; result: any }>(`/submissions?id=${id}&action=regrade`, { method: 'POST' }),
     aiGrade: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=ai-grade`, { method: 'POST' }),
     markReviewed: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=review`, { method: 'POST' }),
     bulkDelete: (ids: string[]) => request<void>(`/submissions?ids=${ids.join(',')}`, { method: 'DELETE' }),

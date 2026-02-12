@@ -158,29 +158,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: List
     if (req.method === 'GET') {
-        if (mode === 'available') {
-            const exams = await db.exam.findMany({
-                where: {
-                    published: true,
-                    submissions: {
-                        none: { userId: user.userId }
-                    }
-                },
-                orderBy: { createdAt: 'desc' }
-            });
-            return res.status(200).json(exams);
-        }
-
-        if (!isAdmin) return res.status(403).json({ error: 'Access denied' });
-        const exams = await db.exam.findMany({
-            orderBy: { createdAt: 'desc' },
-            include: {
-                questions: { select: { id: true } },
-                author: { select: { id: true, name: true, email: true } },
-                collaborators: { select: { id: true, name: true, email: true } }
+        try {
+            console.log(`[API] Fetching Exams. Mode: ${mode}, User: ${(user as any).email} (${user.role})`);
+            if (mode === 'available') {
+                const exams = await db.exam.findMany({
+                    where: {
+                        published: true,
+                        submissions: {
+                            none: { userId: user.userId }
+                        }
+                    },
+                    orderBy: { createdAt: 'desc' }
+                });
+                console.log(`[API] Found ${exams.length} available exams.`);
+                return res.status(200).json(exams);
             }
-        });
-        return res.status(200).json(exams);
+
+            if (!isAdmin) {
+                console.warn(`[API] Access Denied for List. User: ${(user as any).email}`);
+                return res.status(403).json({ error: 'Access denied' });
+            }
+
+            const exams = await db.exam.findMany({
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    questions: { select: { id: true } },
+                    author: { select: { id: true, name: true, email: true } },
+                    collaborators: { select: { id: true, name: true, email: true } }
+                }
+            });
+            console.log(`[API] Admin List: Found ${exams.length} exams.`);
+            return res.status(200).json(exams);
+        } catch (e: any) {
+            console.error("[API] Failed to fetch exams list:", e);
+            return res.status(500).json({ error: 'Failed to fetch exams ' + e.message });
+        }
     }
 
     // POST: Create
@@ -228,6 +240,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 collaborators: { connect: collaboratorConnect }
             };
 
+            console.log("[API] Creating Exam. Payload:", JSON.stringify(createData, null, 2));
+
             if (scheduledReleaseDate) {
                 createData.scheduledReleaseDate = typeof scheduledReleaseDate === 'number'
                     ? new Date(scheduledReleaseDate)
@@ -242,10 +256,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 data: createData,
                 include: { questions: true }
             });
+            console.log("[API] Exam Created Successfully:", exam.id);
             return res.status(200).json(exam);
         } catch (e: any) {
             console.error("Exam Creation Failed:", e);
-            return res.status(500).json({ error: `Create Failed. AuthorID: ${user?.userId}. Error: ${e.message}` });
+            // Log inner prisma error if available
+            if (e.code) console.error("Prisma Error Code:", e.code, e.meta);
+            return res.status(500).json({ error: `Create Failed. AuthorID: ${user?.userId}. Error: ${e.message}`, details: e });
         }
     }
 

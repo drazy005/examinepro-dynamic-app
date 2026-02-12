@@ -448,6 +448,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
         const { mode } = req.query;
         try {
+            console.log(`[API] Fetching Submissions. Mode: ${mode}, User: ${user.userId}`);
             if (mode === 'history') {
                 // Candidate View
                 try {

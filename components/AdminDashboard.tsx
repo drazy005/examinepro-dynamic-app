@@ -204,21 +204,52 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
 
   const handleSave = async () => {
-    if (!editingExam.title || !editingExam.questions?.length) {
-      addToast("Title and questions are required.", 'error');
-      return;
+    try {
+      console.log("Saving Exam...", editingExam);
+      if (!editingExam.title || !editingExam.questions?.length) {
+        addToast("Title and questions are required.", 'error');
+        return;
+      }
+
+      // Ensure questions have IDs (if they are new, they should have been saved to bank first!)
+      // Filter out invalid questions
+      const validQuestions = (editingExam.questions || []).filter(q => q && q.id);
+      if (validQuestions.length !== (editingExam.questions?.length || 0)) {
+        console.warn("Some questions missing IDs, filtering them out.");
+      }
+
+      const securedExam: Exam = {
+        ...editingExam,
+        questions: validQuestions,
+        id: editingExam.id, // Only use specific ID if updating, otherwise undefined for creation? 
+        // Wait, logic was: id: editingExam.id || uuidv4()
+        // If creating new, we should let backend generate ID? No, frontend generates UUID often.
+        // But Prisma create prefers to generate unless we force it.
+        // My debug script didn't send ID. It worked.
+        // Let's TRY sending without ID if it's new.
+        // id: editingExam.id ? editingExam.id : undefined, 
+        // But type definition requires ID? No, Partial<Exam> in state.
+
+        // Let's stick to existing logic but log it.
+        title: sanitize(editingExam.title || 'New Exam'),
+        totalPoints: validQuestions.reduce((sum, q) => sum + q.points, 0),
+        published: editingExam.published ?? false,
+        version: (editingExam.version || 0) + 1,
+        createdAt: editingExam.createdAt || Date.now()
+      } as Exam;
+
+      if (!editingExam.id) {
+        // New Exam
+        delete (securedExam as any).id;
+      }
+
+      console.log("Payload to onSaveExam:", JSON.stringify(securedExam, null, 2));
+      await onSaveExam(securedExam);
+      setIsCreating(false);
+    } catch (e: any) {
+      console.error("HandleSave Error:", e);
+      addToast("Failed to save exam: " + e.message, 'error');
     }
-    const securedExam: Exam = {
-      ...editingExam,
-      id: editingExam.id || uuidv4(),
-      title: sanitize(editingExam.title || 'New Exam'),
-      totalPoints: (editingExam.questions || []).reduce((sum, q) => sum + q.points, 0),
-      published: editingExam.published ?? false,
-      version: (editingExam.version || 0) + 1,
-      createdAt: editingExam.createdAt || Date.now()
-    } as Exam;
-    await onSaveExam(securedExam);
-    setIsCreating(false);
   };
 
   const handleBulkDeleteSubmissions = async (ids: string[]) => {
@@ -955,7 +986,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
           systemSettings={systemSettings}
           isAdmin={true}
           onReGrade={async () => {
-            await handleAIGradeSubmission(selectedSubmission.sub.id);
+            // AI Grading Removed. 
+            // We can trigger a recalc similar to the list view if needed, but for now just warn.
+            // Or ideally, call api.submissions.regrade(sub.id)
+            try {
+              const res = await api.submissions.regrade(selectedSubmission.sub.id);
+              if (res.success && res.result) {
+                addToast(`Score recalculated: ${res.result.score}`, 'success');
+                // Update local state?
+                fetchSubmissions(submissionsData.page);
+              }
+            } catch (e) { addToast("Recalc failed", "error"); }
           }}
           onMarkReviewed={async () => {
             await fetchSubmissions(submissionsData.page);
