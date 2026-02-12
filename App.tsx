@@ -14,6 +14,8 @@ import { api } from './services/api';
 import { useToast } from './services/ToastContext';
 import { useQuestions } from './hooks/useQuestions';
 import { useExams } from './hooks/useExams';
+import DebugPage from './components/DebugPage';
+
 
 
 const App: React.FC = () => {
@@ -369,6 +371,14 @@ const App: React.FC = () => {
   return (
     <Layout user={user} onLogout={handleLogout} isDarkMode={isDarkMode} onToggleDarkMode={toggleDarkMode} branding={branding} onDashboardClick={handleDashboardClick} onMyExamsClick={() => setCandidateTab('history')}>
       {renderContent()}
+
+      {/* Temporary Debug Route: /debug */}
+      {window.location.pathname === '/debug' && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <DebugPage />
+        </div>
+      )}
+
       {viewingSubmission && (
         <SubmissionDetailModal
           submission={viewingSubmission.sub}
