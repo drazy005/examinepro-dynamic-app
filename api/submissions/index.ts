@@ -24,11 +24,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(role);
 
     let { action, id } = req.query;
-    const { route } = req.query;
 
-    // Handle Vercel Dynamic Route: /api/submissions/123
-    if (!id && Array.isArray(route) && route.length > 0) {
-        id = route[0];
+    // Parse Route manually (Vercel Rewrite /api/submissions/:id -> /api/submissions/index.ts)
+    // URL: /api/submissions/123?action=grade -> Segments: ['api', 'submissions', '123']
+    const urlObj = new URL(req.url!, `http://${req.headers.host}`);
+    const segments = urlObj.pathname.split('/').filter(s => s !== '');
+
+    // If segment 2 exists and is not 'index', treat as ID
+    if (!id && segments.length > 2 && segments[2] !== 'index') {
+        id = segments[2];
     }
 
     // === SINGLE ID OPERATIONS (Logic merged from [id].ts) ===

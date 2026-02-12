@@ -15,9 +15,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const role = (user.role as string).toUpperCase();
     const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(role);
 
-    // Parse Route
-    const { route, mode, action } = req.query;
-    const pathId = Array.isArray(route) ? route[0] : (typeof route === 'string' ? route : null);
+    // Parse Route manually (Vercel Rewrite /api/exams/:id -> /api/exams/index.ts)
+    // URL: /api/exams/123?mode=available -> Segments: ['api', 'exams', '123']
+    const urlObj = new URL(req.url!, `http://${req.headers.host}`);
+    const segments = urlObj.pathname.split('/').filter(s => s !== '');
+    const pathId = segments.length > 2 ? segments[2] : null;
+
+    const { mode, action } = req.query;
 
     // Handlers for Specific ID (GET Detail, PUT Update, DELETE, POST Actions)
     if (pathId) {
