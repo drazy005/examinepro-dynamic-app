@@ -66,7 +66,10 @@ export const api = {
     logout: () => request<any>('/auth/logout', { method: 'POST' }),
   },
   questions: {
-    list: () => request<Question[]>('/questions'),
+    list: (params: any = {}) => {
+      const qs = new URLSearchParams(params).toString();
+      return request<{ data: Question[], pagination: any } | Question[]>(`/questions?${qs}`);
+    },
     create: (data: Partial<Question>) => request<Question>('/questions', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Question>) => request<Question>(`/questions?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/questions?id=${id}`, { method: 'DELETE' }),
@@ -91,6 +94,7 @@ export const api = {
     get: (id: string) => request<Submission>(`/submissions?id=${id}`),
     create: (data: any) => request<Submission>('/submissions', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: any) => request<Submission>(`/submissions?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/submissions?id=${id}`, { method: 'DELETE' }),
     saveDraft: (submissionId: string, answers: any) => request<void>('/submissions?action=draft', { method: 'POST', body: JSON.stringify({ submissionId, answers }) }),
     grade: (submissionId: string, questionId: string, result: any) => request<void>(`/submissions?id=${submissionId}&action=grade`, { method: 'POST', body: JSON.stringify({ questionId, result }) }),
     release: (submissionId: string) => request<void>(`/submissions?id=${submissionId}&action=release`, { method: 'POST' }),

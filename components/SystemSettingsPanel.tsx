@@ -17,7 +17,7 @@ const SystemSettingsPanel: React.FC = () => {
     const loadSettings = async () => {
         setIsLoading(true);
         try {
-            const data = await api.admin.getSettings();
+            const data = await api.settings.get();
             // Merge valid data coming from DB with defaults
             const merged = {
                 ...settings,
@@ -47,7 +47,7 @@ const SystemSettingsPanel: React.FC = () => {
                 // Add extended fields here as needed
             };
 
-            await api.admin.updateSettings(dbPayload);
+            await api.settings.update(dbPayload);
             setSettings(localSettings);
 
             // Also update branding context for immediate feedback

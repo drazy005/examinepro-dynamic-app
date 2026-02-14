@@ -22,7 +22,7 @@ export const useSubmissions = () => {
 
   const updateSubmission = useCallback(async (sub: Submission) => {
     try {
-      const updated = await api.submissions.update(sub);
+      const updated = await api.submissions.update(sub.id, sub);
       if (updated) {
         setSubmissions(prev => prev.map(s => s.id === updated.id ? updated : s));
       }

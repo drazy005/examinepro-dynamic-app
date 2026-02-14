@@ -98,6 +98,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
     setIsLoadingData(false);
   };
 
+  // Pagination State for Questions
+  const [questionsData, setQuestionsData] = useState({
+    data: [] as Question[],
+    total: 0,
+    page: 1,
+    totalPages: 1
+  });
+  const [questionFilterText, setQuestionFilterText] = useState('');
+  const [questionFilterType, setQuestionFilterType] = useState<QuestionType | 'ALL'>('ALL');
+  const [questionBatchFilter, setQuestionBatchFilter] = useState('');
+
+  const fetchQuestions = async (page = 1, silent = false) => {
+    if (!silent) setIsLoadingData(true);
+    try {
+      const params: any = { page, limit: 50 };
+      if (questionFilterType !== 'ALL') params.type = questionFilterType;
+      if (questionFilterText) params.search = questionFilterText;
+      if (questionBatchFilter) params.batchId = questionBatchFilter;
+
+      const res: any = await api.questions.list(params);
+
+      if (res.data) {
+        setQuestionsData({
+          data: res.data,
+          total: res.pagination.total,
+          page: res.pagination.page,
+          totalPages: res.pagination.totalPages
+        });
+      } else if (Array.isArray(res)) {
+        // Fallback
+        setQuestionsData({ data: res, total: res.length, page: 1, totalPages: 1 });
+      }
+    } catch (e) {
+      if (!silent) addToast("Failed to load questions", "error");
+    }
+    if (!silent) setIsLoadingData(false);
+  };
+
+  const saveQuestion = async (q: Question) => {
+    try {
+      if (q.id) await api.questions.update(q.id, q);
+      else await api.questions.create(q);
+      addToast('Question saved', 'success');
+      fetchQuestions(questionsData.page, true);
+    } catch (e) { addToast('Failed to save', 'error'); }
+  };
+
   const fetchUsers = async (page = 1, silent = false) => {
     setIsLoadingData(true);
     try {
@@ -107,52 +154,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
     setIsLoadingData(false);
   };
 
-  const fetchLogs = async (page = 1, silent = false) => {
-    setIsLoadingData(true);
-    try {
-      const { data, pagination } = await api.admin.logs(page, 20);
-      setLogsData({ data, total: pagination.total, page: pagination.page, totalPages: pagination.totalPages });
-    } catch (e) { if (!silent) addToast("Failed to load logs", "error"); }
-    setIsLoadingData(false);
-  };
-
-  // Initial Fetch based on Tab
-  React.useEffect(() => {
-    if (activeTab === 'submissions') fetchSubmissions(1, true);
-    if (activeTab === 'users') fetchUsers(1, true);
-    // if (activeTab === 'logs') fetchLogs(1, true); 
-    if (activeTab === 'overview') {
-      // fetch simple counts or just fetch page 1 of each to get 'total'
-      fetchSubmissions(1, true); // Silent
-      fetchUsers(1, true); // Silent
+  const deleteQuestion = async (id: string) => {
+    if (confirm('Delete this question?')) {
+      try {
+        await api.questions.delete(id);
+        addToast('Question deleted', 'success');
+        fetchQuestions(questionsData.page, true);
+      } catch (e) { addToast('Failed to delete', 'error'); }
     }
-  }, [activeTab]);
-
-
-
-  // Helper functions for question management
-  const saveQuestion = async (q: Question) => {
-    if (q.id && onUpdateBankQuestion) {
-      onUpdateBankQuestion(q.id, q);
-    } else if (onAddToBank) {
-      onAddToBank(q);
-    }
-  };
-
-  const deleteQuestion = (id: string) => {
-    if (onDeleteFromBank) onDeleteFromBank(id);
   };
 
   const handleBatchImport = async (importedQuestions: Partial<Question>[]) => {
     setIsImporting(true);
     try {
-      // Use the API client instead of direct fetch to ensure correct endpoint and error handling
-      const res = await api.questions.import(importedQuestions);
-      addToast(`Successfully imported ${res.count || importedQuestions.length} questions.`, 'success');
+      const batchId = `BATCH_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${Math.floor(Math.random() * 1000)}`;
 
-      // Refresh questions list
-      // Invalidate cache or force reload. For now, we'll reload window to be safe.
-      setTimeout(() => window.location.reload(), 1000);
+      // Update API to support object payload { questions, batchId }
+      // We need to update api.questions.import signature too? 
+      // Currently: (data: any[]) => ...
+      // We will overload it or just pass array if API handles it? 
+      // API updated to check for object.
+      const payload: any = { questions: importedQuestions, batchId };
+
+      const res = await api.questions.import(payload as any);
+      addToast(`Successfully imported ${res.count || importedQuestions.length} questions. Batch: ${batchId}`, 'success');
+
+      setQuestionBatchFilter(batchId); // Auto-filter to show new batch
+      fetchQuestions(1, true);
       setIsImporting(false);
     } catch (e: any) {
       console.error("Batch Import Error:", e);
@@ -161,17 +189,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
     }
   };
 
-  // Filter states for Questions
-  const [questionFilterText, setQuestionFilterText] = useState('');
-  const [questionFilterType, setQuestionFilterType] = useState<QuestionType | 'ALL'>('ALL');
-
-  const filteredQuestions = useMemo(() => {
-    return questionBank.filter(q => {
-      const matchesText = q.text.toLowerCase().includes(questionFilterText.toLowerCase());
-      const matchesType = questionFilterType === 'ALL' || q.type === questionFilterType;
-      return matchesText && matchesType;
-    });
-  }, [questionBank, questionFilterText, questionFilterType]);
+  // Removed unused filters state (handled in questionsData parent now)
 
   const defaultTimerSettings: TimerSettings = {
     warningThresholdMinutes: 5,
@@ -589,9 +607,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
             </div>
 
             <div className="flex justify-between mb-8">
-              <h2 className="font-black text-2xl uppercase">Question Bank ({filteredQuestions.length})</h2>
+              <h2 className="font-black text-2xl uppercase">Question Bank ({questionsData.total})</h2>
               <div className="flex gap-2">
                 <div className="flex gap-2 items-center">
+                  {questionBatchFilter && (
+                    <button onClick={() => { setQuestionBatchFilter(''); fetchQuestions(1); }} className="bg-slate-200 px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-slate-300">Clear Batch Filter</button>
+                  )}
+                  <input
+                    placeholder="Filter by Batch ID..."
+                    value={questionBatchFilter}
+                    onChange={e => setQuestionBatchFilter(e.target.value)}
+                    onBlur={() => fetchQuestions(1)}
+                    className="bg-transparent border-b border-slate-300 outline-none text-[10px] font-bold w-32 uppercase"
+                  />
+                  <button onClick={() => { setQuestionBatchFilter('null'); fetchQuestions(1); }} className="text-[10px] font-bold uppercase text-slate-400 hover:text-indigo-500">
+                    Show Unbatched
+                  </button>
                   {selectedQuestionIds.size > 0 && (
                     <button onClick={() => {
                       if (confirm(`Delete ${selectedQuestionIds.size} questions?`)) {
@@ -638,14 +669,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
 
               {/* Existing Questions */}
               <div className="flex items-center gap-2 mb-2 px-2">
-                <input type="checkbox" checked={filteredQuestions.length > 0 && selectedQuestionIds.size === filteredQuestions.length}
+                <input type="checkbox" checked={questionsData.data.length > 0 && selectedQuestionIds.size === questionsData.data.length}
                   onChange={() => {
-                    if (selectedQuestionIds.size === filteredQuestions.length) setSelectedQuestionIds(new Set());
-                    else setSelectedQuestionIds(new Set(filteredQuestions.map(q => q.id)));
+                    if (selectedQuestionIds.size === questionsData.data.length) setSelectedQuestionIds(new Set());
+                    else setSelectedQuestionIds(new Set(questionsData.data.map(q => q.id)));
                   }} className="w-4 h-4 rounded text-indigo-600" />
                 <span className="text-xs font-bold text-slate-400 uppercase">Select All</span>
               </div>
-              {filteredQuestions.map(q => (
+              {questionsData.data.map(q => (
                 <div key={q.id} className="flex gap-4 items-start">
                   <div className="pt-4">
                     <input type="checkbox" checked={selectedQuestionIds.has(q.id)}

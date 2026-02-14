@@ -118,6 +118,7 @@ model Question {
   points          Float        @default(1)
   imageUrl        String?
   category        String?
+  batchId         String?      // For organizing bulk imports
   
   createdAt       DateTime     @default(now())
 

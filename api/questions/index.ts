@@ -43,16 +43,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // POST IMPORT
         if (req.method === 'POST') {
-            const questions = req.body;
-            if (!Array.isArray(questions)) return res.status(400).json({ error: 'Invalid payload' });
+            const { questions: rawQuestions, batchId } = req.body;
+            // Support both direct array and object with batchId
+            const questionsToImport = Array.isArray(req.body) ? req.body : rawQuestions;
 
-            const validQuestions = questions.map((q: any) => ({
+            if (!Array.isArray(questionsToImport)) return res.status(400).json({ error: 'Invalid payload' });
+
+            const validQuestions = questionsToImport.map((q: any) => ({
                 type: q.type || 'MCQ',
                 text: q.text || 'Untitled Question',
                 options: q.options || [],
                 correctAnswer: q.correctAnswer || '',
                 points: q.points || 1,
-                // examId removed as it's not in the model anymore (Many-to-Many)
+                batchId: batchId || q.batchId || null, // Capture batchId
+                category: q.category || 'General',
+                imageUrl: q.imageUrl || null,
+                authorId: user.userId // Assign author!
             }));
 
             try {
@@ -138,20 +144,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // === STANDARD OPERATIONS ===
 
-    // GET: List
+    // GET: List (Paginated & Filtered)
     if (req.method === 'GET') {
         try {
-            const questions = await db.question.findMany({
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    exams: { select: { title: true } },
-                    // @ts-ignore
-                    author: { select: { id: true, name: true } },
-                    // @ts-ignore
-                    collaborators: { select: { id: true, name: true } }
+            const page = Number(req.query.page) || 1;
+            const limit = Number(req.query.limit) || 50;
+            const batchId = req.query.batchId as string;
+            const search = req.query.search as string;
+            const typeFilter = req.query.type as any;
+
+            const skip = (page - 1) * limit;
+
+            const where: any = {};
+            if (batchId) {
+                if (batchId === 'null') {
+                    where.batchId = null;
+                } else {
+                    where.batchId = batchId;
+                }
+            }
+            if (typeFilter && typeFilter !== 'ALL') where.type = typeFilter;
+            if (search) {
+                where.OR = [
+                    { text: { contains: search, mode: 'insensitive' } },
+                    { category: { contains: search, mode: 'insensitive' } }
+                ];
+            }
+
+            const [total, questions] = await Promise.all([
+                db.question.count({ where }),
+                db.question.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        exams: { select: { title: true } },
+                        // @ts-ignore
+                        author: { select: { id: true, name: true } },
+                        // @ts-ignore
+                        collaborators: { select: { id: true, name: true } }
+                    }
+                })
+            ]);
+
+            return res.status(200).json({
+                data: questions,
+                pagination: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
                 }
             });
-            return res.status(200).json(questions);
         } catch (e: any) {
             console.error('Questions fetch error:', e);
             return res.status(500).json({ error: `Failed to fetch questions: ${e.message}` });
