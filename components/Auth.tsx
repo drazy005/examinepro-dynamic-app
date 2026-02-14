@@ -159,6 +159,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>
               </div>
 
+              {/*
               <button
                 type="button"
                 onClick={() => window.location.href = '/api/auth/google'}
@@ -172,6 +173,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 </svg>
                 Sign in with Google
               </button>
+              */}
             </form>
           </>
         )}

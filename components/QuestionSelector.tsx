@@ -34,17 +34,15 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     // Filters
     const [filterText, setFilterText] = useState('');
     const [filterType, setFilterType] = useState<QuestionType | 'ALL'>('ALL');
-    const [filterCategory, setFilterCategory] = useState('');
+    const [filterBatchId, setFilterBatchId] = useState('');
 
     const fetchQuestions = useCallback(async () => {
         setIsLoading(true);
         try {
-            const params: any = { page, limit: 20 }; // Smaller limit for modal
+            const params: any = { page, limit: 50 }; // Limit 50
             if (filterType !== 'ALL') params.type = filterType;
             if (filterText) params.search = filterText;
-            // Note: Category filter is combined with search in API currently, or we can add specific param if API supports it.
-            // API uses 'search' for both text and category OR check.
-            // If user wants strict category, API needs update. For now rely on search.
+            if (filterBatchId) params.batchId = filterBatchId;
 
             const res: any = await api.questions.list(params);
 
@@ -62,7 +60,7 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         } finally {
             setIsLoading(false);
         }
-    }, [page, filterType, filterText]);
+    }, [page, filterType, filterText, filterBatchId]);
 
     // Initial Fetch & Debounce
     useEffect(() => {
@@ -76,8 +74,6 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
         if (newSet.has(q.id)) {
             newSet.delete(q.id);
-            // Don't delete from map immediately if we want to keep cache? 
-            // Actually, if we deselect, we should remove.
             newMap.delete(q.id);
         } else {
             newSet.add(q.id);
@@ -86,6 +82,28 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         setSelectedIds(newSet);
         setSelectedQuestionsMap(newMap);
     };
+
+    const toggleAllVisible = () => {
+        const allVisibleSelected = questions.length > 0 && questions.every(q => selectedIds.has(q.id));
+        const newSet = new Set(selectedIds);
+        const newMap = new Map(selectedQuestionsMap);
+
+        if (allVisibleSelected) {
+            questions.forEach(q => {
+                newSet.delete(q.id);
+                newMap.delete(q.id);
+            });
+        } else {
+            questions.forEach(q => {
+                newSet.add(q.id);
+                newMap.set(q.id, q);
+            });
+        }
+        setSelectedIds(newSet);
+        setSelectedQuestionsMap(newMap);
+    };
+
+
 
     const handleConfirm = () => {
         // We need to return Question objects.
@@ -173,7 +191,7 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                 </div>
 
                 {/* Filters */}
-                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
+                <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
                     <input
                         className="p-3 theme-rounded bg-white dark:bg-slate-900 border-none outline-none font-bold text-xs uppercase shadow-sm"
                         placeholder="Search text..."
@@ -190,6 +208,12 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                         <option value={QuestionType.SBA}>SBA</option>
                         <option value={QuestionType.THEORY}>Theory</option>
                     </select>
+                    <input
+                        className="p-3 theme-rounded bg-white dark:bg-slate-900 border-none outline-none font-bold text-xs uppercase shadow-sm"
+                        placeholder="Filter Batch ID..."
+                        value={filterBatchId}
+                        onChange={e => { setFilterBatchId(e.target.value); setPage(1); }}
+                    />
                 </div>
 
                 {/* List */}
@@ -198,6 +222,9 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                         <span className="text-[10px] font-black uppercase text-slate-400">
                             {isLoading ? 'Loading...' : `Found ${total} questions`}
                         </span>
+                        <button onClick={toggleAllVisible} className="text-indigo-600 hover:underline text-[10px] font-bold uppercase transition-colors hover:text-indigo-800">
+                            {questions.length > 0 && questions.every(q => selectedIds.has(q.id)) ? 'Deselect Page' : 'Select Page'}
+                        </button>
                     </div>
 
                     {questions.length === 0 && !isLoading ? (

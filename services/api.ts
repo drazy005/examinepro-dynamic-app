@@ -64,6 +64,7 @@ export const api = {
     register: (data: any) => request<any>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
     me: () => request<any>('/auth/me'),
     logout: () => request<any>('/auth/logout', { method: 'POST' }),
+    forgotPassword: (email: string) => request<void>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
   },
   questions: {
     list: (params: any = {}) => {
