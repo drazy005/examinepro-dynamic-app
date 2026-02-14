@@ -26,6 +26,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { action, id, mode, type } = req.query;
 
+    if (action === 'get-batches') {
+        try {
+            const batches = await db.question.findMany({
+                distinct: ['batchId'],
+                select: { batchId: true },
+                where: { batchId: { not: null } },
+                orderBy: { batchId: 'desc' }
+            });
+            return res.status(200).json(batches.map(b => b.batchId));
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    }
+
     // === BATCH OPERATIONS ===
     if (action === 'batch') {
         // DELETE BATCH

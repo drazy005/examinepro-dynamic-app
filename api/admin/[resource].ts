@@ -53,6 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'broadcast': return await handleBroadcast(req, res, user);
             case 'test-email': return await handleTestEmail(req, res, user);
             case 'settings': return await handleSettings(req, res, user, isSuperAdmin); // POST updates
+            case 'stats': return await handleStats(req, res, user);
             default: return res.status(404).json({ error: 'Resource not found' });
         }
     } catch (error: any) {
@@ -366,4 +367,27 @@ async function handleSettings(req: VercelRequest, res: VercelResponse, user: any
         return res.status(200).json({ success: true });
     }
     return res.status(405).json({ error: 'Method not allowed' });
+}
+
+async function handleStats(req: VercelRequest, res: VercelResponse, user: any) {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+    try {
+        const [usersCount, examsCount, questionsCount, submissionsCount] = await Promise.all([
+            db.user.count(),
+            db.exam.count(),
+            db.question.count(),
+            db.submission.count()
+        ]);
+
+        return res.status(200).json({
+            users: usersCount,
+            exams: examsCount,
+            questions: questionsCount,
+            submissions: submissionsCount,
+        });
+    } catch (error: any) {
+        console.error("Stats Error:", error);
+        return res.status(500).json({ error: 'Failed to fetch stats' });
+    }
 }

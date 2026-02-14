@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { User, Exam, QuestionType, ResultRelease, Question, Submission, TimerSettings, ExamTemplate, GradingPolicy, Difficulty, SystemSettings, QuestionResult, UserRole, BlogPost } from '../services/types';
 import { v4 as uuidv4 } from 'uuid';
 import SubmissionDetailModal from './SubmissionDetailModal';
@@ -108,6 +108,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
   const [questionFilterText, setQuestionFilterText] = useState('');
   const [questionFilterType, setQuestionFilterType] = useState<QuestionType | 'ALL'>('ALL');
   const [questionBatchFilter, setQuestionBatchFilter] = useState('');
+
+  // Stats State
+  const [stats, setStats] = useState({ users: 0, exams: 0, questions: 0, submissions: 0 });
+  const [batches, setBatches] = useState<string[]>([]);
+
+  // Initial Data Fetch & Tab Switching
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const res = await api.admin.stats();
+        setStats(res);
+      } catch (e) { console.error("Failed to load stats", e); }
+    };
+    const loadBatches = async () => {
+      try {
+        const res = await api.questions.getBatches();
+        if (Array.isArray(res)) setBatches(res);
+      } catch (e) { console.error("Failed to load batches", e); }
+    };
+    loadStats();
+    loadBatches();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'submissions' && submissionsData.data.length === 0) fetchSubmissions(1);
+    if (activeTab === 'users' && usersData.data.length === 0) fetchUsers(1);
+    if (activeTab === 'questions' && questionsData.data.length === 0) fetchQuestions(1);
+  }, [activeTab]);
 
   const fetchQuestions = async (page = 1, silent = false) => {
     if (!silent) setIsLoadingData(true);
@@ -375,11 +403,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 <div className="text-[10px] font-bold uppercase text-slate-400">Total Exams</div>
               </div>
               <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl">
-                <div className="text-2xl font-black text-emerald-600">{submissionsData.total}</div>
+                <div className="text-2xl font-black text-emerald-600">{stats.submissions}</div>
                 <div className="text-[10px] font-bold uppercase text-slate-400">Submissions</div>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
-                <div className="text-2xl font-black text-blue-600">{usersData.total}</div>
+                <div className="text-2xl font-black text-blue-600">{stats.users}</div>
                 <div className="text-[10px] font-bold uppercase text-slate-400">Users</div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl">
@@ -605,6 +633,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 <option value={QuestionType.THEORY}>Theory</option>
               </select>
             </div>
+
+            {/* Batches List */}
+            {batches.length > 0 && (
+              <div className="mb-6 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 py-1">Batches:</span>
+                {batches.map(b => (
+                  <button
+                    key={b}
+                    onClick={() => { setQuestionBatchFilter(b); fetchQuestions(1); }}
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${questionBatchFilter === b ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="flex justify-between mb-8">
               <h2 className="font-black text-2xl uppercase">Question Bank ({questionsData.total})</h2>

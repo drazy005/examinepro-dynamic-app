@@ -63,10 +63,18 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     }, [page, filterType, filterText, filterBatchId]);
 
     // Initial Fetch & Debounce
+    const [batches, setBatches] = useState<string[]>([]);
+
     useEffect(() => {
         const t = setTimeout(fetchQuestions, 300);
         return () => clearTimeout(t);
     }, [fetchQuestions]);
+
+    useEffect(() => {
+        api.questions.getBatches().then(res => {
+            if (Array.isArray(res)) setBatches(res);
+        }).catch(console.error);
+    }, []);
 
     const toggleSelection = (q: Question) => {
         const newSet = new Set(selectedIds);
@@ -208,12 +216,27 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                         <option value={QuestionType.SBA}>SBA</option>
                         <option value={QuestionType.THEORY}>Theory</option>
                     </select>
-                    <input
-                        className="p-3 theme-rounded bg-white dark:bg-slate-900 border-none outline-none font-bold text-xs uppercase shadow-sm"
-                        placeholder="Filter Batch ID..."
-                        value={filterBatchId}
-                        onChange={e => { setFilterBatchId(e.target.value); setPage(1); }}
-                    />
+                    <div className="col-span-1 md:col-span-3">
+                        <input
+                            className="p-3 w-full theme-rounded bg-white dark:bg-slate-900 border-none outline-none font-bold text-xs uppercase shadow-sm mb-2"
+                            placeholder="Filter Batch ID..."
+                            value={filterBatchId}
+                            onChange={e => { setFilterBatchId(e.target.value); setPage(1); }}
+                        />
+                        {batches.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {batches.map(b => (
+                                    <button
+                                        key={b}
+                                        onClick={() => { setFilterBatchId(b); setPage(1); }}
+                                        className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase transition-colors ${filterBatchId === b ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}
+                                    >
+                                        {b}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* List */}
