@@ -325,7 +325,7 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
                     <div className="flex gap-3 items-center ml-auto">
                         <div className="text-xs font-bold uppercase text-slate-500 mr-4">
-                            {selectedIds.size} Selected
+                            {selectedIds.size} Total Selected
                         </div>
                         <button onClick={onClose} className="px-6 py-3 font-bold uppercase text-xs text-slate-500 hover:bg-slate-100 rounded-lg">Cancel</button>
                         <button

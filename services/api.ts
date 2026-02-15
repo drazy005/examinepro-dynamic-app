@@ -71,7 +71,7 @@ export const api = {
       const qs = new URLSearchParams(params).toString();
       return request<{ data: Question[], pagination: any } | Question[]>(`/questions?${qs}`);
     },
-    getBatches: () => request<string[]>('/api/questions?action=get-batches'),
+    getBatches: () => request<string[]>('/questions?action=get-batches'),
     create: (data: Partial<Question>) => request<Question>('/questions', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Question>) => request<Question>(`/questions?id=${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/questions?id=${id}`, { method: 'DELETE' }),
