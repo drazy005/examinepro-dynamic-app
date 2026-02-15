@@ -599,7 +599,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
                 onClick={() => fetchSubmissions(submissionsData.page - 1)}
                 className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
               >Previous</button>
-              <span className="text-xs font-bold text-slate-400">Page {submissionsData.page} of {submissionsData.totalPages || 1}</span>
+              <span className="text-xs font-bold text-slate-400">Page {submissionsData.page} of {submissionsData.totalPages || 1} ({submissionsData.total} items)</span>
               <button
                 disabled={submissionsData.page >= submissionsData.totalPages}
                 onClick={() => fetchSubmissions(submissionsData.page + 1)}
@@ -1029,14 +1029,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = memo(({
               </tbody>
             </table>
 
-            {/* Users Pagination */}
+            {/* Pagination */}
             <div className="flex justify-between items-center mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
               <button
                 disabled={usersData.page === 1}
                 onClick={() => fetchUsers(usersData.page - 1)}
                 className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
               >Previous</button>
-              <span className="text-xs font-bold text-slate-400">Page {usersData.page} of {usersData.totalPages || 1}</span>
+              <span className="text-xs font-bold text-slate-400">
+                Page {usersData.page} of {usersData.totalPages || 1}
+                <span className="ml-1 opacity-70">
+                  ({(usersData.page - 1) * 50 + 1}-{Math.min(usersData.page * 50, usersData.total)} of {usersData.total})
+                </span>
+              </span>
               <button
                 disabled={usersData.page >= usersData.totalPages}
                 onClick={() => fetchUsers(usersData.page + 1)}

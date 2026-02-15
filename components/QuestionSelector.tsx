@@ -217,14 +217,31 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                         <option value={QuestionType.THEORY}>Theory</option>
                     </select>
                     <div className="col-span-1 md:col-span-3">
-                        <input
-                            className="p-3 w-full theme-rounded bg-white dark:bg-slate-900 border-none outline-none font-bold text-xs uppercase shadow-sm mb-2"
-                            placeholder="Filter Batch ID..."
-                            value={filterBatchId}
-                            onChange={e => { setFilterBatchId(e.target.value); setPage(1); }}
-                        />
+                        <div className="flex gap-2 mb-2">
+                            <input
+                                className="p-3 flex-1 theme-rounded bg-white dark:bg-slate-900 border-none outline-none font-bold text-xs uppercase shadow-sm"
+                                placeholder="Filter Batch ID..."
+                                value={filterBatchId}
+                                onChange={e => { setFilterBatchId(e.target.value); setPage(1); }}
+                            />
+                            <button
+                                onClick={() => { setFilterBatchId('null'); setPage(1); }}
+                                className={`px-4 theme-rounded font-bold text-[10px] uppercase transition-colors ${filterBatchId === 'null' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                Unbatched
+                            </button>
+                            {filterBatchId && (
+                                <button
+                                    onClick={() => { setFilterBatchId(''); setPage(1); }}
+                                    className="px-4 theme-rounded bg-slate-200 text-slate-500 font-bold text-[10px] uppercase hover:bg-slate-300"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
                         {batches.length > 0 && (
                             <div className="flex flex-wrap gap-2">
+                                <span className="text-[9px] font-black uppercase text-slate-400 py-1">From Bank:</span>
                                 {batches.map(b => (
                                     <button
                                         key={b}
@@ -243,7 +260,7 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-100 dark:bg-slate-800/50">
                     <div className="flex justify-between items-center px-2 mb-2">
                         <span className="text-[10px] font-black uppercase text-slate-400">
-                            {isLoading ? 'Loading...' : `Found ${total} questions`}
+                            {isLoading ? 'Loading...' : `Found ${total} questions. Showing ${(page - 1) * 50 + 1}-${Math.min(page * 50, total)}.`}
                         </span>
                         <button onClick={toggleAllVisible} className="text-indigo-600 hover:underline text-[10px] font-bold uppercase transition-colors hover:text-indigo-800">
                             {questions.length > 0 && questions.every(q => selectedIds.has(q.id)) ? 'Deselect Page' : 'Select Page'}
@@ -286,9 +303,24 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                 <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 theme-rounded-b flex justify-between items-center">
                     <div className="flex items-center gap-4">
                         {/* Pagination */}
-                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 bg-slate-100 rounded text-xs font-bold uppercase disabled:opacity-50">Prev</button>
-                        <span className="text-xs font-bold text-slate-400">Page {page} of {totalPages}</span>
-                        <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 bg-slate-100 rounded text-xs font-bold uppercase disabled:opacity-50">Next</button>
+                        <div className="flex justify-between items-center mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
+                            <button
+                                disabled={questionsData.page === 1}
+                                onClick={() => fetchQuestions(questionsData.page - 1)}
+                                className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
+                            >Previous</button>
+                            <span className="text-xs font-bold text-slate-400">
+                                Page {questionsData.page} of {questionsData.totalPages || 1}
+                                <span className="ml-1 opacity-70">
+                                    ({(questionsData.page - 1) * 50 + 1}-{Math.min(questionsData.page * 50, questionsData.total)} of {questionsData.total})
+                                </span>
+                            </span>
+                            <button
+                                disabled={questionsData.page >= questionsData.totalPages}
+                                onClick={() => fetchQuestions(questionsData.page + 1)}
+                                className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
+                            >Next</button>
+                        </div>
                     </div>
 
                     <div className="flex gap-3 items-center">
