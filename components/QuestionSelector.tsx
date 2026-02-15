@@ -301,29 +301,29 @@ const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
                 {/* Footer Actions */}
                 <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 theme-rounded-b flex justify-between items-center">
-                    <div className="flex items-center gap-4">
+                    <div className="flex gap-3 items-center">
                         {/* Pagination */}
-                        <div className="flex justify-between items-center mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
+                        <div className="flex justify-between items-center mt-6 border-t border-slate-100 dark:border-slate-800 pt-4 w-full">
                             <button
-                                disabled={questionsData.page === 1}
-                                onClick={() => fetchQuestions(questionsData.page - 1)}
+                                disabled={page === 1}
+                                onClick={() => setPage(p => p - 1)}
                                 className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
                             >Previous</button>
                             <span className="text-xs font-bold text-slate-400">
-                                Page {questionsData.page} of {questionsData.totalPages || 1}
+                                Page {page} of {totalPages || 1}
                                 <span className="ml-1 opacity-70">
-                                    ({(questionsData.page - 1) * 50 + 1}-{Math.min(questionsData.page * 50, questionsData.total)} of {questionsData.total})
+                                    ({(page - 1) * 50 + 1}-{Math.min(page * 50, total)} of {total})
                                 </span>
                             </span>
                             <button
-                                disabled={questionsData.page >= questionsData.totalPages}
-                                onClick={() => fetchQuestions(questionsData.page + 1)}
+                                disabled={page >= totalPages}
+                                onClick={() => setPage(p => p + 1)}
                                 className="px-4 py-2 text-xs font-bold uppercase bg-slate-100 dark:bg-slate-800 rounded disabled:opacity-50"
                             >Next</button>
                         </div>
                     </div>
 
-                    <div className="flex gap-3 items-center">
+                    <div className="flex gap-3 items-center ml-auto">
                         <div className="text-xs font-bold uppercase text-slate-500 mr-4">
                             {selectedIds.size} Selected
                         </div>
